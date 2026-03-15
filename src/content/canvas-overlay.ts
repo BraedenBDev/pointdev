@@ -134,6 +134,7 @@ export class CanvasOverlay {
 
   private redraw(): void {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+    this.applyStrokeStyle()
     for (const ann of this.drawnAnnotations) {
       if (ann.type === 'circle') {
         this.drawEllipse(ann.data.cx, ann.data.cy, ann.data.rx, ann.data.ry)
@@ -143,26 +144,24 @@ export class CanvasOverlay {
     }
   }
 
-  private drawEllipse(cx: number, cy: number, rx: number, ry: number): void {
+  private applyStrokeStyle(): void {
     this.ctx.strokeStyle = STROKE_COLOR
+    this.ctx.fillStyle = STROKE_COLOR
     this.ctx.lineWidth = STROKE_WIDTH
+  }
+
+  private drawEllipse(cx: number, cy: number, rx: number, ry: number): void {
     this.ctx.beginPath()
     this.ctx.ellipse(cx, cy, Math.max(rx, 1), Math.max(ry, 1), 0, 0, Math.PI * 2)
     this.ctx.stroke()
   }
 
   private drawArrow(sx: number, sy: number, ex: number, ey: number): void {
-    this.ctx.strokeStyle = STROKE_COLOR
-    this.ctx.fillStyle = STROKE_COLOR
-    this.ctx.lineWidth = STROKE_WIDTH
-
-    // Line
     this.ctx.beginPath()
     this.ctx.moveTo(sx, sy)
     this.ctx.lineTo(ex, ey)
     this.ctx.stroke()
 
-    // Arrowhead
     const angle = Math.atan2(ey - sy, ex - sx)
     this.ctx.save()
     this.ctx.translate(ex, ey)
