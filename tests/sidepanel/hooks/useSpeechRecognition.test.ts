@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useSpeechRecognition } from '../../../src/sidepanel/hooks/useSpeechRecognition'
 
-// Mock chrome.runtime and chrome.offscreen
+// Mock chrome.runtime and chrome.storage
 const messageListeners: Array<(message: any) => void> = []
 
 beforeEach(() => {
@@ -19,22 +19,11 @@ beforeEach(() => {
       sendMessage: vi.fn(),
       getURL: vi.fn((path: string) => `chrome-extension://test/${path}`),
     },
-    offscreen: {
-      createDocument: vi.fn().mockResolvedValue(undefined),
-      Reason: { USER_MEDIA: 'USER_MEDIA' },
-    },
     storage: {
       local: {
         get: vi.fn().mockResolvedValue({ pointdev_mic_granted: true }),
         set: vi.fn().mockResolvedValue(undefined),
       },
-    },
-  })
-  // Mock navigator.permissions for mic permission check
-  vi.stubGlobal('navigator', {
-    ...navigator,
-    permissions: {
-      query: vi.fn().mockResolvedValue({ state: 'granted', onchange: null }),
     },
   })
 })
@@ -47,33 +36,27 @@ describe('useSpeechRecognition', () => {
     expect(result.current.segments).toEqual([])
   })
 
-  it('reports available (offscreen is always available)', () => {
+  it('reports available', () => {
     const { result } = renderHook(() => useSpeechRecognition())
     expect(result.current.isAvailable).toBe(true)
   })
 
-  it('creates offscreen document and sends start message', async () => {
+  it('sends SPEECH_START to mic-permission tab', async () => {
     const { result } = renderHook(() => useSpeechRecognition())
     // Wait for async mic permission check to resolve
     await act(async () => { await new Promise(r => setTimeout(r, 10)) })
     await act(async () => { result.current.start(Date.now()) })
-    expect(chrome.offscreen.createDocument).toHaveBeenCalledWith(
-      expect.objectContaining({
-        url: expect.stringContaining('offscreen.html'),
-        reasons: ['USER_MEDIA'],
-      })
-    )
     expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'OFFSCREEN_SPEECH_START' })
+      expect.objectContaining({ type: 'SPEECH_START' })
     )
   })
 
-  it('updates state when offscreen reports started', async () => {
+  it('updates state when speech tab reports started', async () => {
     const { result } = renderHook(() => useSpeechRecognition())
     await act(async () => { await new Promise(r => setTimeout(r, 10)) })
     await act(async () => { result.current.start(Date.now()) })
     act(() => {
-      messageListeners.forEach(fn => fn({ type: 'OFFSCREEN_SPEECH_STARTED' }))
+      messageListeners.forEach(fn => fn({ type: 'SPEECH_STARTED' }))
     })
     expect(result.current.isListening).toBe(true)
   })
@@ -84,16 +67,16 @@ describe('useSpeechRecognition', () => {
     await act(async () => { result.current.start(Date.now()) })
     act(() => { result.current.stop() })
     expect(result.current.isListening).toBe(false)
-    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: 'OFFSCREEN_SPEECH_STOP' })
+    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: 'SPEECH_STOP' })
   })
 
-  it('accumulates segments from offscreen results', async () => {
+  it('accumulates segments from speech results', async () => {
     const { result } = renderHook(() => useSpeechRecognition())
     await act(async () => { await new Promise(r => setTimeout(r, 10)) })
     await act(async () => { result.current.start(Date.now()) })
     act(() => {
       messageListeners.forEach(fn => fn({
-        type: 'OFFSCREEN_SPEECH_RESULT',
+        type: 'SPEECH_RESULT',
         segments: [{ text: 'hello world', startMs: 1000, endMs: 2000 }],
         interim: '',
       }))
@@ -102,13 +85,13 @@ describe('useSpeechRecognition', () => {
     expect(result.current.transcript).toBe('hello world')
   })
 
-  it('handles errors from offscreen', async () => {
+  it('handles errors from speech tab', async () => {
     const { result } = renderHook(() => useSpeechRecognition())
     await act(async () => { await new Promise(r => setTimeout(r, 10)) })
     await act(async () => { result.current.start(Date.now()) })
     act(() => {
       messageListeners.forEach(fn => fn({
-        type: 'OFFSCREEN_SPEECH_ERROR',
+        type: 'SPEECH_ERROR',
         error: 'Microphone access denied.',
       }))
     })

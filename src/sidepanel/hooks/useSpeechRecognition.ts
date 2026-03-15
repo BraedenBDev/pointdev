@@ -14,13 +14,10 @@ interface UseSpeechRecognitionReturn {
   stop: () => void
 }
 
-// Storage key to remember that mic permission was granted
 const MIC_GRANTED_KEY = 'pointdev_mic_granted'
 
-// Speech recognition runs in an offscreen document because Chrome extension
-// sidepanels cannot trigger microphone permission prompts.
-// The initial mic permission must be granted from a visible extension page
-// (mic-permission.html) because offscreen documents also can't show prompts.
+// Speech recognition runs in mic-permission.html (a visible extension tab)
+// because neither sidepanels nor offscreen documents can reliably get mic access.
 export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   const [isListening, setIsListening] = useState(false)
   const [micPermission, setMicPermission] = useState<'checking' | 'granted' | 'needs-setup'>('checking')
@@ -32,7 +29,6 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   // Check mic permission on mount and auto-open setup if needed
   useEffect(() => {
     async function checkMic() {
-      // First check our own flag (fast path)
       try {
         const stored = await chrome.storage.local.get(MIC_GRANTED_KEY)
         if (stored[MIC_GRANTED_KEY]) {
@@ -43,20 +39,6 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
         // storage not available in test
       }
 
-      // Try the Permissions API
-      try {
-        if (navigator.permissions?.query) {
-          const status = await navigator.permissions.query({ name: 'microphone' as PermissionName })
-          if (status.state === 'granted') {
-            setMicPermission('granted')
-            chrome.storage.local.set({ [MIC_GRANTED_KEY]: true }).catch(() => {})
-            return
-          }
-        }
-      } catch {
-        // Permissions API not available in this context
-      }
-
       // Not granted — auto-open the permission page
       setMicPermission('needs-setup')
       window.open(chrome.runtime.getURL('mic-permission.html'))
@@ -65,12 +47,12 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     checkMic()
   }, [])
 
-  // Listen for messages from offscreen document and mic-permission page
+  // Listen for messages from the mic-permission tab
   useEffect(() => {
     const listener = (message: any) => {
-      if (message.type === 'OFFSCREEN_SPEECH_STARTED') {
+      if (message.type === 'SPEECH_STARTED') {
         setIsListening(true)
-      } else if (message.type === 'OFFSCREEN_SPEECH_RESULT') {
+      } else if (message.type === 'SPEECH_RESULT') {
         if (message.segments && message.segments.length > 0) {
           setSegments(prev => {
             const updated = [...prev, ...message.segments]
@@ -81,12 +63,11 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
         if (message.interim !== undefined) {
           setInterimTranscript(message.interim)
         }
-      } else if (message.type === 'OFFSCREEN_SPEECH_ERROR') {
+      } else if (message.type === 'SPEECH_ERROR') {
         setError(message.error)
         setIsListening(false)
       } else if (message.type === 'MIC_PERMISSION_GRANTED') {
         setMicPermission('granted')
-        chrome.storage.local.set({ [MIC_GRANTED_KEY]: true }).catch(() => {})
       }
     }
 
@@ -109,24 +90,15 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
       return
     }
 
-    try {
-      await chrome.offscreen.createDocument({
-        url: chrome.runtime.getURL('offscreen.html'),
-        reasons: [chrome.offscreen.Reason.USER_MEDIA],
-        justification: 'Voice transcription via Web Speech API requires microphone access',
-      })
-    } catch {
-      // Document may already exist
-    }
-
+    // Send start command to mic-permission.html tab via broadcast
     chrome.runtime.sendMessage({
-      type: 'OFFSCREEN_SPEECH_START',
+      type: 'SPEECH_START',
       captureStartedAt,
     })
   }, [micPermission])
 
   const stop = useCallback(() => {
-    chrome.runtime.sendMessage({ type: 'OFFSCREEN_SPEECH_STOP' })
+    chrome.runtime.sendMessage({ type: 'SPEECH_STOP' })
     setIsListening(false)
     setInterimTranscript('')
   }, [])
