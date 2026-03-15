@@ -8,7 +8,7 @@
 
 **Tech Stack:** React 18, TypeScript, Vite + CRXJS, bun, Vitest, Web Speech API, HTML5 Canvas, css-selector-generator
 
-**Spec:** `docs/superpowers/specs/2026-03-15-pointdev-mvp-design.md`
+**Spec:** `docs/design/mvp-design.md`
 
 ---
 

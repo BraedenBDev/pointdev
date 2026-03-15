@@ -1,58 +1,53 @@
 # Contributing to PointDev
 
-PointDev is open source under the MIT license. Contributions are welcome.
+PointDev is an NLnet-funded open source project building in the open under the MIT license. Contributions are welcome.
 
-## Development Setup
+## Quick Start
 
 ```bash
-git clone https://github.com/almostalab/pointdev.git
+git clone https://github.com/BraedenBDev/pointdev.git
 cd pointdev
 bun install
 bun dev
 ```
 
-This starts Vite in watch mode. Load the `dist/` folder as an unpacked extension in Chrome (`chrome://extensions/` → Developer Mode → Load unpacked).
+This starts Vite in watch mode. Load `dist/` as an unpacked extension in Chrome:
 
-Changes to sidepanel code may hot-reload depending on the build configuration (CRXJS plugin supports HMR; manual builds require manual reload). Changes to the content script or service worker always require clicking the refresh button on the extension card in `chrome://extensions/`.
+1. Open `chrome://extensions/`
+2. Enable **Developer Mode**
+3. Click **Load unpacked** and select the `dist/` folder
 
-## Project Structure
-
-```
-src/
-├── sidepanel/       # React UI (capture controls + output view)
-├── background/      # MV3 service worker (state coordination)
-├── content/         # Content script (element selection, canvas, cursor tracking)
-└── shared/          # Types, message definitions, formatter
-```
-
-## What to Contribute
-
-**Capture layers** — new types of context the extension can capture (e.g., accessibility tree, performance metrics, network state).
-
-**Output format adapters** — new ways to format the compiled output (e.g., JSON, GitHub issue template, Markdown).
-
-**Framework adapters** — component name resolution for Vue, Svelte, or other frameworks (following the React inspector pattern in `src/content/react-inspector.ts`).
-
-**Bug fixes and UX improvements** — especially around cross-site compatibility, annotation accuracy, and transcription handling.
-
-## Commit Conventions
-
-- Write clear commit messages describing *why*, not just *what*
-- AI-assisted commits must include a `Co-Authored-By` tag
-- Keep commits focused — one logical change per commit
+Changes to sidepanel code may hot-reload. Changes to the content script or service worker require clicking the refresh button on the extension card in `chrome://extensions/`.
 
 ## Testing
 
 ```bash
-bun test          # Run unit tests
-bun test:watch    # Watch mode
+bun test              # Run unit tests (Vitest)
+bunx vitest run       # Same thing, explicit
+bun test:watch        # Watch mode
 ```
 
-Extension integration testing is manual: load the unpacked extension, test on various web pages, verify the compiled output is correct and useful.
+Extension integration testing is manual: load the unpacked extension and test on various web pages. There is no automated E2E test harness for the extension itself.
 
 ## Code Style
 
 - TypeScript strict mode
+- ESLint + Prettier enforced: run `bun lint` before submitting
 - No `any` types without justification
 - Prefer explicit types over inference for function signatures
-- ESLint + Prettier enforced via pre-commit hook
+
+## Commit Conventions
+
+- Write clear commit messages describing *why*, not just *what*
+- One logical change per commit
+- AI-assisted commits must include: `Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>`
+
+## Architecture
+
+PointDev is a Chrome MV3 extension with four cooperating contexts: sidepanel (React UI), service worker (state coordinator), content script (DOM capture), and shared modules (types, messages, formatter).
+
+See `CLAUDE.md` for the full architecture overview, message flow, key technical details, and permission model.
+
+## Finding Work
+
+Check [GitHub Issues](https://github.com/BraedenBDev/pointdev/issues) for open tasks. Look for issues labeled **good first issue** and **help wanted**.

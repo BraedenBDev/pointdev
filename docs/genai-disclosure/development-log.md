@@ -41,7 +41,7 @@
    - Sidepanel UI (capture mode, output mode, error states)
 
 5. **Document generation.** The AI drafted three documents:
-   - **Design spec** (`docs/superpowers/specs/2026-03-15-pointdev-mvp-design.md`) — ~550 lines covering all design sections plus message passing, tech stack, and file structure
+   - **Design spec** (`docs/design/mvp-design.md`) — ~550 lines covering all design sections plus message passing, tech stack, and file structure
    - **README draft** (`docs/README-draft.md`) — GitHub-facing README with problem statement, feature description, example output, installation, usage, permissions, limitations, GenAI disclosure
    - **CONTRIBUTING draft** (`docs/CONTRIBUTING-draft.md`) — Dev setup, project structure, contribution areas, commit conventions
 
@@ -82,7 +82,7 @@
 
 | Artifact | Path | Status |
 |---|---|---|
-| Design specification | `docs/superpowers/specs/2026-03-15-pointdev-mvp-design.md` | Complete, reviewed, issues fixed |
+| Design specification | `docs/design/mvp-design.md` | Complete, reviewed, issues fixed |
 | README draft | `docs/README-draft.md` | Complete, consistent with spec |
 | CONTRIBUTING draft | `docs/CONTRIBUTING-draft.md` | Complete, consistent with spec |
 | Development log | `docs/genai-disclosure/development-log.md` | This document |
@@ -106,7 +106,7 @@
 
 1. **Spec approved.** Braeden reviewed and approved the design specification without changes.
 
-2. **Implementation plan written.** The AI produced a detailed TDD implementation plan (`docs/superpowers/plans/2026-03-15-pointdev-mvp.md`) with 15 tasks across 4 chunks:
+2. **Implementation plan written.** The AI produced a detailed TDD implementation plan (`docs/design/mvp-implementation-plan.md`) with 15 tasks across 4 chunks:
    - Chunk 1: Project scaffold, shared types, Web Speech API spike
    - Chunk 2: Service worker state management, template formatter, message routing
    - Chunk 3: Content script — element selector, canvas overlay, cursor tracker, React inspector, coordinator
@@ -142,7 +142,7 @@
 
 | Artifact | Path | Status |
 |---|---|---|
-| Implementation plan | `docs/superpowers/plans/2026-03-15-pointdev-mvp.md` | Complete, under review |
+| Implementation plan | `docs/design/mvp-implementation-plan.md` | Complete, under review |
 | CLAUDE.md | `CLAUDE.md` | Complete |
 | Workflow preferences | Memory: `feedback_workflow.md` | Saved |
 
@@ -440,7 +440,7 @@
    - Second fix: moved script to separate `.js` file (loaded but `SpeechRecognition.start()` still got `not-allowed`)
    - Third fix: added `getUserMedia({ audio: true })` call before `SpeechRecognition.start()` to explicitly trigger Chrome's permission dialog (deployed but untested — user didn't reload)
 
-   **Issue: Canvas annotations don't scroll with the page.** Root cause identified: `CanvasOverlay` uses `position: fixed` and stores viewport coordinates in `drawnAnnotations`. No scroll listener triggers redraw. Annotations stay stuck to viewport position when user scrolls. Fix planned but not implemented (see `docs/superpowers/plans/2026-03-15-pending-fixes.md`).
+   **Issue: Canvas annotations don't scroll with the page.** Root cause identified: `CanvasOverlay` uses `position: fixed` and stores viewport coordinates in `drawnAnnotations`. No scroll listener triggers redraw. Annotations stay stuck to viewport position when user scrolls. Fix planned but not implemented (see `docs/design/pending-fixes.md`).
 
    **Issue: "message channel closed" console errors.** Root cause: `chrome.runtime.sendMessage` broadcasts to all contexts, and listeners return `true` (async) for messages they don't handle. Fix planned.
 
@@ -470,7 +470,7 @@
 | Cursor dwell dedup | `src/shared/dwell.ts` | Merged (PR #4) |
 | Offscreen speech document | `public/offscreen.html`, `public/offscreen.js` | On main, untested |
 | Tab URL fix | `src/background/message-handler.ts`, `src/content/index.ts` | On main |
-| Pending fixes plan | `docs/superpowers/plans/2026-03-15-pending-fixes.md` | Written |
+| Pending fixes plan | `docs/design/pending-fixes.md` | Written |
 | Browser automation positioning | `README.md`, design spec | On main |
 
 ### Next steps
@@ -489,7 +489,7 @@
 
 ### What happened
 
-1. **Canvas annotation scroll anchoring fixed.** Implemented the plan from `docs/superpowers/plans/2026-03-15-pending-fixes.md`. Three changes to `src/content/canvas-overlay.ts`: (a) store page-relative coordinates in `drawnAnnotations` by adding `scrollX/Y` at draw time, (b) subtract current `scrollX/Y` in `redraw()` to convert back to viewport-relative for rendering, (c) add a `requestAnimationFrame`-throttled scroll listener that calls `redraw()` on every scroll event, cleaned up in `destroy()`.
+1. **Canvas annotation scroll anchoring fixed.** Implemented the plan from `docs/design/pending-fixes.md`. Three changes to `src/content/canvas-overlay.ts`: (a) store page-relative coordinates in `drawnAnnotations` by adding `scrollX/Y` at draw time, (b) subtract current `scrollX/Y` in `redraw()` to convert back to viewport-relative for rendering, (c) add a `requestAnimationFrame`-throttled scroll listener that calls `redraw()` on every scroll event, cleaned up in `destroy()`.
 
 2. **Message channel noise eliminated.** Updated three files to only return `true` from `onMessage` for message types that listener actually handles:
    - `src/background/service-worker.ts` — added `HANDLED_TYPES` set, returns `false` for unknown types
