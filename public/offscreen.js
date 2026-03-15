@@ -20,8 +20,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   } else if (message.type === 'OFFSCREEN_SPEECH_STOP') {
     stopRecognition();
     sendResponse({ ok: true });
+  } else {
+    return false; // Don't hold channel for unhandled messages
   }
-  return true;
 });
 
 async function requestMicAndStart() {
