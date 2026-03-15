@@ -24,7 +24,9 @@ PointDev captures technical context and human context at the same time.
 | Computed styles | font-size, color, spacing, etc. |
 | React component name | Detected via fiber internals when available |
 | Page metadata | URL, title, viewport dimensions |
+| Device metadata | Browser, OS, screen size, pixel ratio |
 | Cursor dwell behavior | Tracks what you point at while talking |
+| Element screenshot | Captured on element selection |
 
 **Human context (your input):**
 
@@ -36,34 +38,44 @@ PointDev captures technical context and human context at the same time.
 
 Everything compiles into a single structured prompt with timestamps that correlate your words with your annotations. Copy it, paste it into any AI coding tool, and the agent knows exactly what to do.
 
-### Example Output
+### Real Output
+
+This is actual output from PointDev running on https://almostalab.io/:
 
 ```
 ## Context
-- URL: https://myapp.dev/landing
-- Page title: My App - Landing
-- Viewport: 1200 x 800px
-- Captured at: 2026-03-20 14:32:05
-
-## Target Element
-- Selector: div.hero > h1
-- React Component: <HeroSection>
-- Computed: font-size: 32px, color: #1a1a1a, font-weight: 700
-- DOM: <h1 class="hero-title">Welcome to Our Platform</h1>
+- URL: https://almostalab.io/
+- Page title: Almost A Lab — Building the Future of AdTech
+- Viewport: 1677 x 1145px
+- Captured at: 2026-03-15 15:12:20
 
 ## User Intent (voice transcript)
-[00:18] "this whole section looks good but..."
-[00:23] "and here, the font is far too small, lets increase 25%"
+[00:04] "I think the"
+[00:06] "main hero"
+[00:09] "is far too"
+[00:11] "large"
+[00:15] "and we need to adjust the line breaking"
+[00:16] "to be"
+[00:19] "two or three lines at Max"
+[00:23] "and there is a problem at the bottom here"
+[00:26] "where you scroll CTA"
+[00:28] "is"
+[00:32] "overlapping with the"
+[00:35] "subtitle of the page"
+[00:39] "here I'll select it"
 
 ## Annotations
-1. [00:23] Circle around div.hero > h1 at (340, 180), radius 85px
+1. [00:40] Circle around .lg\:min-h-\[100svh\] at (42, 1019), radius 131px
 
 ## Cursor Behavior
-- [00:22-00:25] Dwelled 3.1s over div.hero > h1 (during: "the font is far too small")
-
-## Screenshot
-[base64 data URL]
+- [00:07-00:32] Dwelled 25.5s over h1.font-display.text-hero (during: "main hero")
+- [00:21-00:29] Dwelled 7.2s over span.font-mono.text-[10px] (during: "and there is a problem at the bottom here")
+- [00:25-00:32] Dwelled 7.3s over div.absolute.bottom-10 (during: "where you scroll CTA")
+- [00:28-00:34] Dwelled 5.6s over p.hidden.lg:block (during: "is")
+- [00:29-00:36] Dwelled 6.2s over div.absolute.bottom-10 (during: "overlapping with the")
 ```
+
+An AI agent reading this output knows: the user wants the hero text smaller (two or three lines max), and there's an overlap between the scroll CTA (`div.absolute.bottom-10`) and the subtitle (`p.hidden.lg:block`). The cursor dwell data confirms which elements the user was looking at while speaking. No guesswork.
 
 ## Installation
 
@@ -74,6 +86,7 @@ Everything compiles into a single structured prompt with timestamps that correla
 3. Open `chrome://extensions/`, enable Developer Mode
 4. Click "Load unpacked" and select the `dist/` folder
 5. Open any web page, click the PointDev icon to open the sidepanel
+6. On first open, a tab will ask for microphone permission (one-time setup for voice)
 
 ## Usage
 
@@ -90,11 +103,13 @@ Everything compiles into a single structured prompt with timestamps that correla
 
 PointDev is a Chrome Manifest V3 extension with three cooperating contexts:
 
-**Sidepanel (React):** Capture controls, live feedback, compiled output display, and voice transcription via Web Speech API.
+**Sidepanel (React):** Capture controls, live feedback, compiled output display. Coordinates voice transcription with the mic-permission tab.
 
-**Service Worker:** Coordinates state between sidepanel and content script. Holds the capture session.
+**Service Worker:** Coordinates state between sidepanel and content script. Holds the capture session, routes messages, captures element screenshots.
 
-**Content Script:** Injected into the active page for element selection, canvas annotation overlay, cursor tracking, and React component detection.
+**Content Script:** Injected into the active page for element selection, canvas annotation overlay (position: fixed, redraws on scroll), cursor tracking, and React component detection.
+
+**Mic-Permission Tab:** Runs Web Speech API in a visible extension page. Chrome sidepanels and offscreen documents cannot get microphone access, so speech recognition runs here and sends results back to the sidepanel via messaging.
 
 All capture data flows into a single `CaptureSession` object with timestamps relative to recording start. A template formatter compiles this into the structured output.
 
@@ -111,7 +126,8 @@ PointDev requests minimal Chrome permissions:
 | `activeTab` | Access the current tab when you start a capture |
 | `scripting` | Inject the content script for element selection and annotation |
 | `sidePanel` | The extension UI |
-| `storage` | Persist your preferences |
+| `storage` | Persist capture session and mic permission state |
+| `offscreen` | Reserved for future local transcription support |
 
 No background access to your browsing. No data leaves your machine except Web Speech API audio, which Chrome sends to Google for transcription.
 
