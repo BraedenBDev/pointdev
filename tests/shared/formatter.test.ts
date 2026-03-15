@@ -14,7 +14,7 @@ function makeSession(overrides: Partial<CaptureSession> = {}): CaptureSession {
     voiceRecording: null,
     annotations: [],
     cursorTrace: [],
-    screenshot: null,
+    screenshots: [],
     ...overrides,
   }
 }
@@ -191,5 +191,25 @@ describe('formatSession', () => {
     // Should not exceed ~550 chars for the DOM line
     const domLine = output.split('\n').find(l => l.startsWith('- DOM:'))
     expect(domLine!.length).toBeLessThan(600)
+  })
+
+  it('formats element screenshots with timestamps and dimensions', () => {
+    const output = formatSession(makeSession({
+      screenshots: [
+        { selector: 'div.hero > h1', timestampMs: 5000, dataUrl: 'data:image/png;base64,abc', width: 340, height: 50 },
+        { selector: 'nav > a.pricing', timestampMs: 12000, dataUrl: 'data:image/png;base64,xyz', width: 120, height: 30 },
+      ],
+    }))
+    expect(output).toContain('## Screenshots')
+    expect(output).toContain('1. [00:05] div.hero > h1 (340x50px)')
+    expect(output).toContain('2. [00:12] nav > a.pricing (120x30px)')
+    // base64 data should NOT appear in formatted output
+    expect(output).not.toContain('base64,abc')
+    expect(output).not.toContain('base64,xyz')
+  })
+
+  it('omits Screenshots section when no screenshots', () => {
+    const output = formatSession(makeSession())
+    expect(output).not.toContain('## Screenshots')
   })
 })

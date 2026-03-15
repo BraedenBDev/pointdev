@@ -14,7 +14,15 @@ export interface CaptureSession {
 
   cursorTrace: CursorSampleData[]
 
-  screenshot: string | null
+  screenshots: ElementScreenshot[]
+}
+
+export interface ElementScreenshot {
+  selector: string
+  timestampMs: number
+  dataUrl: string
+  width: number
+  height: number
 }
 
 export interface SelectedElementData {
@@ -81,6 +89,6 @@ export function createEmptySession(id: string, tabId: number, url: string, title
     voiceRecording: null,
     annotations: [],
     cursorTrace: [],
-    screenshot: null,
+    screenshots: [],
   }
 }

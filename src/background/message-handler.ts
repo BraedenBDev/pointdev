@@ -43,19 +43,11 @@ export async function handleMessage(
       const session = store.getSession()
       if (!session) return { type: 'CAPTURE_ERROR', error: 'No active capture session' }
 
-      // Take screenshot before removing overlay
+      // Remove overlay from the page
       try {
-        const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true })
-        if (activeTab?.id === session.tabId) {
-          await chrome.tabs.sendMessage(session.tabId, { type: 'REMOVE_CAPTURE' })
-          // REMOVE_CAPTURE response confirms overlay is destroyed; capture screenshot now
-          const screenshot = await chrome.tabs.captureVisibleTab()
-          store.setScreenshot(screenshot)
-        } else {
-          await chrome.tabs.sendMessage(session.tabId, { type: 'REMOVE_CAPTURE' }).catch(() => {})
-        }
+        await chrome.tabs.sendMessage(session.tabId, { type: 'REMOVE_CAPTURE' }).catch(() => {})
       } catch {
-        // Screenshot failed, proceed without it
+        // Content script may already be gone
       }
 
       const finalSession = store.endSession()!
@@ -92,6 +84,28 @@ export async function handleMessage(
       store.addCursorBatch(message.data)
       // No SESSION_UPDATED for cursor batches (too noisy)
       return undefined
+    }
+
+    case 'SCREENSHOT_REQUEST': {
+      const session = store.getSession()
+      if (!session) return undefined
+
+      try {
+        const dataUrl = await chrome.tabs.captureVisibleTab()
+        const { selector, rect, timestampMs } = message.data
+        const screenshot = {
+          selector,
+          timestampMs,
+          dataUrl,
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+        }
+        store.addScreenshot(screenshot)
+        return { type: 'SCREENSHOT_CAPTURED', data: screenshot }
+      } catch {
+        // Screenshot capture failed, continue without it
+        return undefined
+      }
     }
 
     default:

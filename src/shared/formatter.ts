@@ -22,8 +22,8 @@ export function formatSession(session: CaptureSession): string {
     sections.push(formatCursorBehavior(dwells, session))
   }
 
-  if (session.screenshot) {
-    sections.push(`## Screenshot\n${session.screenshot}`)
+  if (session.screenshots.length > 0) {
+    sections.push(formatScreenshots(session))
   }
 
   return sections.join('\n\n')
@@ -157,6 +157,16 @@ function formatCursorBehavior(dwells: DwellEntry[], session: CaptureSession): st
     }
 
     lines.push(`- [${startTs}\u2013${endTs}] Dwelled ${seconds}s over ${target}${correlation}`)
+  }
+  return lines.join('\n')
+}
+
+function formatScreenshots(session: CaptureSession): string {
+  const lines = ['## Screenshots']
+  for (let i = 0; i < session.screenshots.length; i++) {
+    const s = session.screenshots[i]
+    const ts = formatTimestamp(s.timestampMs)
+    lines.push(`${i + 1}. [${ts}] ${s.selector} (${s.width}x${s.height}px)`)
   }
   return lines.join('\n')
 }
