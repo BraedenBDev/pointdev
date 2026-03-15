@@ -160,7 +160,7 @@ code, .selector { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11p
 
 .error-message {
   padding: 12px;
-  background: #fef2f2;
+  background: color-mix(in srgb, var(--danger) 10%, var(--bg));
   color: var(--danger);
   border-radius: var(--radius);
   margin-bottom: 12px;

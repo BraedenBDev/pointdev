@@ -26,6 +26,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
 
   const recognitionRef = useRef<any>(null)
   const captureStartRef = useRef<number>(0)
+  const processedResultsRef = useRef<number>(0)
 
   const isAvailable = getSpeechRecognitionAPI() != null
 
@@ -37,6 +38,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     }
 
     captureStartRef.current = captureStartedAt
+    processedResultsRef.current = 0
     setTranscript('')
     setInterimTranscript('')
     setSegments([])
@@ -51,7 +53,8 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
       let interim = ''
       const newSegments: VoiceSegment[] = []
 
-      for (let i = 0; i < event.results.length; i++) {
+      // Only process results we haven't seen yet (Web Speech API results are cumulative)
+      for (let i = processedResultsRef.current; i < event.results.length; i++) {
         const result = event.results[i]
         if (result.isFinal) {
           const text = result[0].transcript.trim()
@@ -63,6 +66,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
               endMs: now - captureStartRef.current,
             })
           }
+          processedResultsRef.current = i + 1
         } else {
           interim += result[0].transcript
         }
