@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "PointDev",
+  "version": "0.1.0",
+  "description": "Structured browser context capture for AI-assisted development",
+  "permissions": ["activeTab", "scripting", "sidePanel", "storage"],
+  "side_panel": {
+    "default_path": "src/sidepanel/index.html"
+  },
+  "background": {
+    "service_worker": "src/background/service-worker.ts",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Open PointDev",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

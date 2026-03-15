@@ -41,7 +41,7 @@ pnpm init
 
 ```bash
 pnpm add react react-dom
-pnpm add -D typescript @types/react @types/react-dom @types/chrome vite @crxjs/vite-plugin@beta vitest @testing-library/react @testing-library/jest-dom jsdom css-selector-generator eslint prettier
+pnpm add -D typescript @types/react @types/react-dom @types/chrome vite @vitejs/plugin-react @crxjs/vite-plugin@beta vitest @testing-library/react @testing-library/jest-dom jsdom css-selector-generator eslint prettier
 ```
 
 - [ ] **Step 3: Create tsconfig.json**
@@ -207,7 +207,17 @@ Add to `package.json`:
 }
 ```
 
-- [ ] **Step 12: Build and verify**
+- [ ] **Step 12: Create .gitignore**
+
+`.gitignore`:
+```
+node_modules/
+dist/
+.env
+*.local
+```
+
+- [ ] **Step 13: Build and verify**
 
 ```bash
 pnpm build
@@ -1900,7 +1910,6 @@ export class CanvasOverlay {
       this.drawnAnnotations.push({ type: 'circle', data: { cx, cy, rx, ry } })
       this.redraw()
 
-      const nearest = findNearestElement(cx, cy, this.doc)
       const coordinates: CircleCoords = {
         centerX: cx + scrollX,
         centerY: cy + scrollY,
@@ -1912,7 +1921,7 @@ export class CanvasOverlay {
         type: 'circle',
         coordinates,
         timestampMs,
-        nearestElement: nearest ? undefined : undefined, // selector resolved by caller
+        // nearestElement resolved by caller (content script coordinator) using css-selector-generator
       }
     }
 
@@ -1926,7 +1935,6 @@ export class CanvasOverlay {
       this.drawnAnnotations.push({ type: 'arrow', data: { sx, sy, ex, ey } })
       this.redraw()
 
-      const nearest = findNearestElement(ex, ey, this.doc)
       const coordinates: ArrowCoords = {
         startX: sx + scrollX,
         startY: sy + scrollY,
@@ -1938,7 +1946,7 @@ export class CanvasOverlay {
         type: 'arrow',
         coordinates,
         timestampMs,
-        nearestElement: undefined, // selector resolved by caller
+        // nearestElement resolved by caller (content script coordinator) using css-selector-generator
       }
     }
 
@@ -2014,6 +2022,7 @@ git commit -m "feat: add canvas annotation overlay with circle and arrow drawing
 
 **Files:**
 - Create: `src/content/cursor-tracker.ts`
+- Create: `src/shared/dwell.ts` (pure function, no DOM dependencies — shared between content and sidepanel)
 - Test: `tests/content/cursor-tracker.test.ts`
 
 - [ ] **Step 1: Write cursor tracker test**
@@ -2021,7 +2030,8 @@ git commit -m "feat: add canvas annotation overlay with circle and arrow drawing
 `tests/content/cursor-tracker.test.ts`:
 ```typescript
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { CursorTracker, computeDwells } from '../../src/content/cursor-tracker'
+import { CursorTracker } from '../../src/content/cursor-tracker'
+import { computeDwells } from '../../src/shared/dwell'
 import type { CursorSampleData } from '@shared/types'
 
 describe('computeDwells', () => {
@@ -2099,16 +2109,26 @@ export class CursorTracker {
       const pageY = e.clientY + win.scrollY
       this.currentPosition = { x: pageX, y: pageY }
 
+      // Resolve nearest element and generate selector inline
+      let nearestSelector: string | undefined
       const element = doc.elementFromPoint(e.clientX, e.clientY)
-      const nearest = element && !element.hasAttribute('data-pointdev')
-        ? undefined // selector resolved by content script coordinator
-        : undefined
+      if (element && !element.hasAttribute('data-pointdev') && element.tagName !== 'HTML' && element.tagName !== 'BODY') {
+        if (element.id) {
+          nearestSelector = `#${element.id}`
+        } else {
+          let tag = element.tagName.toLowerCase()
+          if (element.className && typeof element.className === 'string') {
+            tag += '.' + element.className.trim().split(/\s+/).slice(0, 2).join('.')
+          }
+          nearestSelector = tag
+        }
+      }
 
       this.buffer.push({
         x: pageX,
         y: pageY,
         timestampMs: now - captureStartedAt,
-        nearestElement: nearest,
+        nearestElement: nearestSelector,
       })
     }
 
@@ -2954,7 +2974,7 @@ git commit -m "feat: add sidepanel capture controls, live feedback, and styles"
 import { useMemo } from 'react'
 import type { CaptureSession } from '@shared/types'
 import { formatSession } from '@shared/formatter'
-import { computeDwells } from '../../content/cursor-tracker'
+import { computeDwells } from '@shared/dwell'
 import { CopyButton } from './CopyButton'
 
 interface OutputViewProps {
@@ -3048,7 +3068,7 @@ git commit -m "feat: add output view with template formatter rendering and copy-
 
 `src/sidepanel/App.tsx`:
 ```tsx
-import { useRef } from 'react'
+import { useRef, useEffect } from 'react'
 import { useCaptureSession } from './hooks/useCaptureSession'
 import { useSpeechRecognition } from './hooks/useSpeechRecognition'
 import { CaptureControls } from './components/CaptureControls'
@@ -3061,8 +3081,23 @@ export function App() {
   const speech = useSpeechRecognition()
   const captureStartRef = useRef(0)
 
+  // Send transcript updates incrementally as segments arrive
+  const lastSegmentCountRef = useRef(0)
+  useEffect(() => {
+    if (state !== 'capturing') return
+    if (speech.segments.length > lastSegmentCountRef.current) {
+      const newSegment = speech.segments[speech.segments.length - 1]
+      chrome.runtime.sendMessage({
+        type: 'TRANSCRIPT_UPDATE',
+        data: { transcript: speech.transcript, segment: newSegment },
+      })
+      lastSegmentCountRef.current = speech.segments.length
+    }
+  }, [speech.segments, speech.transcript, state])
+
   const handleStart = async () => {
     captureStartRef.current = Date.now()
+    lastSegmentCountRef.current = 0
     await startCapture()
     if (speech.isAvailable) {
       speech.start(captureStartRef.current)
@@ -3071,21 +3106,24 @@ export function App() {
 
   const handleStop = async () => {
     speech.stop()
-
-    // Send final transcript to service worker
-    if (speech.transcript) {
-      for (const segment of speech.segments) {
-        await chrome.runtime.sendMessage({
-          type: 'TRANSCRIPT_UPDATE',
-          data: { transcript: speech.transcript, segment },
-        })
-      }
-    }
-
     await stopCapture()
   }
 
   if (state === 'complete' && session) {
+    // Empty capture detection
+    const hasContent = session.selectedElement || session.annotations.length > 0 ||
+      (session.voiceRecording && session.voiceRecording.segments.length > 0)
+    if (!hasContent) {
+      return (
+        <div>
+          <div className="header">PointDev</div>
+          <div className="error-message">
+            No context captured. Try selecting an element or recording your voice.
+          </div>
+          <button className="btn-primary" onClick={reset}>Try Again</button>
+        </div>
+      )
+    }
     return <OutputView session={session} onBack={reset} />
   }
 
