@@ -1,4 +1,4 @@
-import type { AnnotationData, CircleCoords, ArrowCoords } from '@shared/types'
+import type { AnnotationData } from '@shared/types'
 import type { CaptureMode } from '@shared/messages'
 
 const STROKE_COLOR = '#FF3333'
@@ -7,6 +7,10 @@ const ARROW_HEAD_SIZE = 12
 
 interface Point { clientX: number; clientY: number }
 
+interface StoredCircle { type: 'circle'; cx: number; cy: number; rx: number; ry: number }
+interface StoredArrow { type: 'arrow'; sx: number; sy: number; ex: number; ey: number }
+type StoredAnnotation = StoredCircle | StoredArrow
+
 export class CanvasOverlay {
   private canvas: HTMLCanvasElement
   private ctx: CanvasRenderingContext2D
@@ -14,7 +18,7 @@ export class CanvasOverlay {
   private doc: Document
   private win: Window
   // Stored as page-relative coordinates (viewport + scroll at draw time)
-  private drawnAnnotations: Array<{ type: 'circle' | 'arrow'; data: any }> = []
+  private drawnAnnotations: StoredAnnotation[] = []
   private scrollRAF: number | null = null
   private boundOnScroll: () => void
 
@@ -100,24 +104,13 @@ export class CanvasOverlay {
       if (rx < 5 && ry < 5) return null // too small
 
       // Store page-relative so annotations follow the page on scroll
-      this.drawnAnnotations.push({
-        type: 'circle',
-        data: { cx: cx + scrollX, cy: cy + scrollY, rx, ry },
-      })
+      this.drawnAnnotations.push({ type: 'circle', cx: cx + scrollX, cy: cy + scrollY, rx, ry })
       this.redraw()
 
-      const coordinates: CircleCoords = {
-        centerX: cx + scrollX,
-        centerY: cy + scrollY,
-        radiusX: rx,
-        radiusY: ry,
-      }
-
       return {
-        type: 'circle',
-        coordinates,
+        type: 'circle' as const,
+        coordinates: { centerX: cx + scrollX, centerY: cy + scrollY, radiusX: rx, radiusY: ry },
         timestampMs,
-        // nearestElement resolved by caller (content script coordinator) using css-selector-generator
       }
     }
 
@@ -130,23 +123,14 @@ export class CanvasOverlay {
 
       // Store page-relative so annotations follow the page on scroll
       this.drawnAnnotations.push({
-        type: 'arrow',
-        data: { sx: sx + scrollX, sy: sy + scrollY, ex: ex + scrollX, ey: ey + scrollY },
+        type: 'arrow', sx: sx + scrollX, sy: sy + scrollY, ex: ex + scrollX, ey: ey + scrollY,
       })
       this.redraw()
 
-      const coordinates: ArrowCoords = {
-        startX: sx + scrollX,
-        startY: sy + scrollY,
-        endX: ex + scrollX,
-        endY: ey + scrollY,
-      }
-
       return {
-        type: 'arrow',
-        coordinates,
+        type: 'arrow' as const,
+        coordinates: { startX: sx + scrollX, startY: sy + scrollY, endX: ex + scrollX, endY: ey + scrollY },
         timestampMs,
-        // nearestElement resolved by caller (content script coordinator) using css-selector-generator
       }
     }
 
@@ -161,9 +145,9 @@ export class CanvasOverlay {
     for (const ann of this.drawnAnnotations) {
       if (ann.type === 'circle') {
         // Convert page-relative back to viewport-relative for drawing
-        this.drawEllipse(ann.data.cx - sx, ann.data.cy - sy, ann.data.rx, ann.data.ry)
+        this.drawEllipse(ann.cx - sx, ann.cy - sy, ann.rx, ann.ry)
       } else {
-        this.drawArrow(ann.data.sx - sx, ann.data.sy - sy, ann.data.ex - sx, ann.data.ey - sy)
+        this.drawArrow(ann.sx - sx, ann.sy - sy, ann.ex - sx, ann.ey - sy)
       }
     }
   }

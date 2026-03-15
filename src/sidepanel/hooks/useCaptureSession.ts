@@ -11,7 +11,7 @@ export function useCaptureSession() {
   const portRef = useRef<chrome.runtime.Port | null>(null)
 
   useEffect(() => {
-    const listener = (message: Message, _sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
+    const listener = (message: Message) => {
       if (message.type === 'SESSION_UPDATED') {
         setSession(message.session)
         setState('capturing')

@@ -51,12 +51,8 @@ export async function handleMessage(
       const session = store.getSession()
       if (!session) return { type: 'CAPTURE_ERROR', error: 'No active capture session' }
 
-      // Remove overlay from the page
-      try {
-        await chrome.tabs.sendMessage(session.tabId, { type: 'REMOVE_CAPTURE' }).catch(() => {})
-      } catch {
-        // Content script may already be gone
-      }
+      // Remove overlay from the page (content script may already be gone)
+      await chrome.tabs.sendMessage(session.tabId, { type: 'REMOVE_CAPTURE' }).catch(() => {})
 
       const finalSession = store.endSession()!
       return { type: 'CAPTURE_COMPLETE', session: finalSession }
