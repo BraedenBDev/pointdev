@@ -4,7 +4,7 @@ import type { VoiceSegment } from '@shared/types'
 interface UseSpeechRecognitionReturn {
   isAvailable: boolean
   isListening: boolean
-  micPermission: 'unknown' | 'granted' | 'denied' | 'prompt'
+  micPermission: 'checking' | 'granted' | 'needs-setup'
   transcript: string
   interimTranscript: string
   segments: VoiceSegment[]
@@ -14,30 +14,55 @@ interface UseSpeechRecognitionReturn {
   stop: () => void
 }
 
+// Storage key to remember that mic permission was granted
+const MIC_GRANTED_KEY = 'pointdev_mic_granted'
+
 // Speech recognition runs in an offscreen document because Chrome extension
 // sidepanels cannot trigger microphone permission prompts.
 // The initial mic permission must be granted from a visible extension page
 // (mic-permission.html) because offscreen documents also can't show prompts.
 export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   const [isListening, setIsListening] = useState(false)
-  const [micPermission, setMicPermission] = useState<'unknown' | 'granted' | 'denied' | 'prompt'>('unknown')
+  const [micPermission, setMicPermission] = useState<'checking' | 'granted' | 'needs-setup'>('checking')
   const [transcript, setTranscript] = useState('')
   const [interimTranscript, setInterimTranscript] = useState('')
   const [segments, setSegments] = useState<VoiceSegment[]>([])
   const [error, setError] = useState<string | null>(null)
 
-  // Check mic permission on mount
+  // Check mic permission on mount and auto-open setup if needed
   useEffect(() => {
-    if (!navigator.permissions?.query) {
-      setMicPermission('unknown')
-      return
+    async function checkMic() {
+      // First check our own flag (fast path)
+      try {
+        const stored = await chrome.storage.local.get(MIC_GRANTED_KEY)
+        if (stored[MIC_GRANTED_KEY]) {
+          setMicPermission('granted')
+          return
+        }
+      } catch {
+        // storage not available in test
+      }
+
+      // Try the Permissions API
+      try {
+        if (navigator.permissions?.query) {
+          const status = await navigator.permissions.query({ name: 'microphone' as PermissionName })
+          if (status.state === 'granted') {
+            setMicPermission('granted')
+            chrome.storage.local.set({ [MIC_GRANTED_KEY]: true }).catch(() => {})
+            return
+          }
+        }
+      } catch {
+        // Permissions API not available in this context
+      }
+
+      // Not granted — auto-open the permission page
+      setMicPermission('needs-setup')
+      window.open(chrome.runtime.getURL('mic-permission.html'))
     }
-    navigator.permissions.query({ name: 'microphone' as PermissionName })
-      .then(status => {
-        setMicPermission(status.state as typeof micPermission)
-        status.onchange = () => setMicPermission(status.state as typeof micPermission)
-      })
-      .catch(() => setMicPermission('unknown'))
+
+    checkMic()
   }, [])
 
   // Listen for messages from offscreen document and mic-permission page
@@ -61,6 +86,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
         setIsListening(false)
       } else if (message.type === 'MIC_PERMISSION_GRANTED') {
         setMicPermission('granted')
+        chrome.storage.local.set({ [MIC_GRANTED_KEY]: true }).catch(() => {})
       }
     }
 
@@ -68,7 +94,6 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     return () => chrome.runtime.onMessage.removeListener(listener)
   }, [])
 
-  // Open the permission page in a new tab (call before starting capture)
   const requestMicPermission = useCallback(() => {
     window.open(chrome.runtime.getURL('mic-permission.html'))
   }, [])
@@ -79,9 +104,8 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     setSegments([])
     setError(null)
 
-    // If mic isn't granted, don't block the capture — just skip speech
-    if (micPermission !== 'granted' && micPermission !== 'unknown') {
-      setError('Microphone not enabled. Click "Setup Microphone" before capturing.')
+    if (micPermission !== 'granted') {
+      setError('Microphone not enabled. Grant permission first, then try again.')
       return
     }
 

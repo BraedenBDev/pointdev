@@ -69,7 +69,7 @@ export function App() {
         <div className="preparing">Preparing capture...</div>
       )}
 
-      {state === 'idle' && speech.micPermission !== 'granted' && speech.micPermission !== 'unknown' && (
+      {speech.micPermission === 'needs-setup' && (
         <div style={{ marginBottom: 12 }}>
           <button className="btn-primary" onClick={speech.requestMicPermission}>
             Setup Microphone

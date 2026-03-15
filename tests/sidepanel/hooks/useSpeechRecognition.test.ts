@@ -23,6 +23,12 @@ beforeEach(() => {
       createDocument: vi.fn().mockResolvedValue(undefined),
       Reason: { USER_MEDIA: 'USER_MEDIA' },
     },
+    storage: {
+      local: {
+        get: vi.fn().mockResolvedValue({ pointdev_mic_granted: true }),
+        set: vi.fn().mockResolvedValue(undefined),
+      },
+    },
   })
   // Mock navigator.permissions for mic permission check
   vi.stubGlobal('navigator', {
@@ -48,6 +54,8 @@ describe('useSpeechRecognition', () => {
 
   it('creates offscreen document and sends start message', async () => {
     const { result } = renderHook(() => useSpeechRecognition())
+    // Wait for async mic permission check to resolve
+    await act(async () => { await new Promise(r => setTimeout(r, 10)) })
     await act(async () => { result.current.start(Date.now()) })
     expect(chrome.offscreen.createDocument).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -62,6 +70,7 @@ describe('useSpeechRecognition', () => {
 
   it('updates state when offscreen reports started', async () => {
     const { result } = renderHook(() => useSpeechRecognition())
+    await act(async () => { await new Promise(r => setTimeout(r, 10)) })
     await act(async () => { result.current.start(Date.now()) })
     act(() => {
       messageListeners.forEach(fn => fn({ type: 'OFFSCREEN_SPEECH_STARTED' }))
@@ -71,6 +80,7 @@ describe('useSpeechRecognition', () => {
 
   it('stops listening', async () => {
     const { result } = renderHook(() => useSpeechRecognition())
+    await act(async () => { await new Promise(r => setTimeout(r, 10)) })
     await act(async () => { result.current.start(Date.now()) })
     act(() => { result.current.stop() })
     expect(result.current.isListening).toBe(false)
@@ -79,6 +89,7 @@ describe('useSpeechRecognition', () => {
 
   it('accumulates segments from offscreen results', async () => {
     const { result } = renderHook(() => useSpeechRecognition())
+    await act(async () => { await new Promise(r => setTimeout(r, 10)) })
     await act(async () => { result.current.start(Date.now()) })
     act(() => {
       messageListeners.forEach(fn => fn({
@@ -93,6 +104,7 @@ describe('useSpeechRecognition', () => {
 
   it('handles errors from offscreen', async () => {
     const { result } = renderHook(() => useSpeechRecognition())
+    await act(async () => { await new Promise(r => setTimeout(r, 10)) })
     await act(async () => { result.current.start(Date.now()) })
     act(() => {
       messageListeners.forEach(fn => fn({
