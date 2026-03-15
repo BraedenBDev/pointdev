@@ -405,3 +405,77 @@
 - Test on non-React pages for graceful fallback
 
 **Repository:** https://github.com/BraedenBDev/pointdev (public, MIT license)
+
+---
+
+## Session 6 — 2026-03-15: Post-MVP Feature PRs & E2E Debugging
+
+**Model:** Claude Opus 4.6 (Anthropic, via Claude Code CLI)
+**Duration:** ~2 hours
+**Human lead:** Braeden Bihag
+**AI role:** Feature developer, systematic debugger
+
+### What happened
+
+1. **Package manager migration.** Braeden requested switch from pnpm to bun. History was surgically rewritten so pnpm never appeared in any commit (using git-filter-repo for blob-level replacement + rebase to swap lockfiles). All 82 tests pass under bun.
+
+2. **Three feature PRs created:**
+   - **PR #2** (device metadata): captures browser name/version, OS, screen resolution, window dimensions, device pixel ratio, touch support, color scheme. 10 new tests.
+   - **PR #3** (element screenshots): replaces full-viewport base64 screenshot dump with element-scoped screenshots captured on element selection. Output references screenshots by selector and dimensions, not inline base64.
+   - **PR #4** (cursor dwell noise): raises dwell threshold from 500ms to 1s, collapses consecutive dwells on the same element into a single entry. Fixes noisy output that showed 10 entries for scrolling past one heading.
+
+3. **Positioning documentation.** Braeden asked how to position PointDev relative to browser automation tools (Playwright, Claude's computer use). Added positioning to README and design spec: browser automation gives AI agents eyes, PointDev gives humans a voice. They're complementary layers solving opposite directions of communication.
+
+4. **PR history cleanup.** PR #1 body was rewritten to read like architectural decisions (not a task execution report). Removed references to "15 tasks across 4 chunks" and NLnet application. One commit message had a "(Step 5)" plan reference removed via rebase.
+
+5. **Manual E2E testing and systematic debugging.** Braeden loaded the extension in Chrome and tested. Issues found and investigated:
+
+   **Issue: "No active tab found"** — `chrome.tabs.query` with `activeTab` permission doesn't populate the `url` field. Root cause traced through three iterations:
+   - First fix: changed `currentWindow: true` to `lastFocusedWindow: true` (didn't help)
+   - Second fix: used `chrome.tabs.get(tabId)` for URL (still undefined from service worker)
+   - Final fix: get URL from content script's `sendResponse` to `INJECT_CAPTURE` (content script has `window.location`)
+
+   **Issue: Microphone never prompts.** Traced through two iterations:
+   - First fix: moved Speech Recognition to offscreen document with `USER_MEDIA` reason (CSP blocked inline script)
+   - Second fix: moved script to separate `.js` file (loaded but `SpeechRecognition.start()` still got `not-allowed`)
+   - Third fix: added `getUserMedia({ audio: true })` call before `SpeechRecognition.start()` to explicitly trigger Chrome's permission dialog (deployed but untested — user didn't reload)
+
+   **Issue: Canvas annotations don't scroll with the page.** Root cause identified: `CanvasOverlay` uses `position: fixed` and stores viewport coordinates in `drawnAnnotations`. No scroll listener triggers redraw. Annotations stay stuck to viewport position when user scrolls. Fix planned but not implemented (see `docs/superpowers/plans/2026-03-15-pending-fixes.md`).
+
+   **Issue: "message channel closed" console errors.** Root cause: `chrome.runtime.sendMessage` broadcasts to all contexts, and listeners return `true` (async) for messages they don't handle. Fix planned.
+
+### Decisions and rationale
+
+| Decision | Made by | Rationale |
+|---|---|---|
+| Switch to bun, rewrite history | Braeden | Preferred tooling; clean history |
+| Element-scoped screenshots instead of viewport dump | Braeden | Base64 walls are useless in output; context-aware captures are more valuable |
+| Cursor dwell threshold 500ms → 1000ms | AI recommendation, Braeden approved | 500ms too sensitive, produced noisy output |
+| Canvas scroll fix deferred to next PR | Braeden | Needs careful implementation, don't rush it |
+| Position PointDev as complementary to browser automation | Braeden | Reviewers might think Playwright solves the same problem |
+| Get page URL from content script, not tabs API | AI (debugging) | activeTab permission doesn't expose URL to service worker |
+
+### What was AI-generated vs. human-authored
+
+- **AI-generated:** Device metadata collector, element screenshot rework, cursor dwell dedup, offscreen speech document, all debugging fixes, positioning copy, PR descriptions
+- **Human-directed:** bun preference, screenshot rework concept (base64 is useless), dwell noise identification (from real output), positioning question (Playwright/Claude comparison), canvas scroll bug report, decision to defer canvas fix
+- **Human-identified bugs (from manual testing):** all four issues above were found by Braeden testing the extension, not by automated tests or AI review
+
+### Artifacts produced
+
+| Artifact | Path | Status |
+|---|---|---|
+| Device metadata collector | `src/content/device-metadata.ts` | Merged (PR #2) |
+| Element screenshot rework | Multiple files | Merged (PR #3) |
+| Cursor dwell dedup | `src/shared/dwell.ts` | Merged (PR #4) |
+| Offscreen speech document | `public/offscreen.html`, `public/offscreen.js` | On main, untested |
+| Tab URL fix | `src/background/message-handler.ts`, `src/content/index.ts` | On main |
+| Pending fixes plan | `docs/superpowers/plans/2026-03-15-pending-fixes.md` | Written |
+| Browser automation positioning | `README.md`, design spec | On main |
+
+### Next steps
+
+- Fix canvas annotation scroll anchoring (highest priority)
+- Fix message channel broadcast noise
+- Verify microphone permission flow (getUserMedia + offscreen)
+- Handle first-click content script injection failure gracefully
