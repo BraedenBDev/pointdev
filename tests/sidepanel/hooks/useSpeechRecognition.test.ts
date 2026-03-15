@@ -24,6 +24,13 @@ beforeEach(() => {
       Reason: { USER_MEDIA: 'USER_MEDIA' },
     },
   })
+  // Mock navigator.permissions for mic permission check
+  vi.stubGlobal('navigator', {
+    ...navigator,
+    permissions: {
+      query: vi.fn().mockResolvedValue({ state: 'granted', onchange: null }),
+    },
+  })
 })
 
 describe('useSpeechRecognition', () => {

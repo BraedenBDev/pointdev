@@ -69,9 +69,14 @@ export function App() {
         <div className="preparing">Preparing capture...</div>
       )}
 
-      {!speech.isAvailable && state === 'idle' && (
-        <div className="error-message">
-          Voice capture unavailable. Other capture features will still work.
+      {state === 'idle' && speech.micPermission !== 'granted' && speech.micPermission !== 'unknown' && (
+        <div style={{ marginBottom: 12 }}>
+          <button className="btn-primary" onClick={speech.requestMicPermission}>
+            Setup Microphone
+          </button>
+          <div style={{ marginTop: 4, fontSize: 11, color: 'var(--muted)' }}>
+            Required for voice narration. One-time setup.
+          </div>
         </div>
       )}
 
