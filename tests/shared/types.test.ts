@@ -15,7 +15,7 @@ describe('CaptureSession types', () => {
       voiceRecording: null,
       annotations: [],
       cursorTrace: [],
-      screenshot: null,
+      screenshots: [],
     }
     expect(session.id).toBe('test-1')
     expect(session.annotations).toHaveLength(0)
@@ -52,7 +52,9 @@ describe('CaptureSession types', () => {
       cursorTrace: [
         { x: 340, y: 180, timestampMs: 2200, nearestElement: 'div.hero > h1', dwellMs: 3100 },
       ],
-      screenshot: 'data:image/png;base64,abc',
+      screenshots: [
+        { selector: 'div.hero > h1', timestampMs: 5000, dataUrl: 'data:image/png;base64,abc', width: 340, height: 50 },
+      ],
     }
     expect(session.selectedElement?.reactComponent?.name).toBe('HeroSection')
     expect(session.annotations).toHaveLength(1)
@@ -70,7 +72,7 @@ describe('CaptureSession types', () => {
     expect(session.voiceRecording).toBeNull()
     expect(session.annotations).toEqual([])
     expect(session.cursorTrace).toEqual([])
-    expect(session.screenshot).toBeNull()
+    expect(session.screenshots).toEqual([])
     expect(session.startedAt).toBeGreaterThan(0)
   })
 })

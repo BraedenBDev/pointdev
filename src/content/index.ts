@@ -53,6 +53,17 @@ function handleClick(e: MouseEvent) {
   }
 
   chrome.runtime.sendMessage({ type: 'ELEMENT_SELECTED', data })
+
+  // Request an element-scoped screenshot from the service worker
+  const rect = element.getBoundingClientRect()
+  chrome.runtime.sendMessage({
+    type: 'SCREENSHOT_REQUEST',
+    data: {
+      selector,
+      rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+      timestampMs: Date.now() - captureStartedAt,
+    },
+  })
 }
 
 function handleMouseDown(e: MouseEvent) {

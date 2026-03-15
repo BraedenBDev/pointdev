@@ -1,4 +1,4 @@
-import type { CaptureSession, SelectedElementData, AnnotationData, CursorSampleData, VoiceSegment } from '@shared/types'
+import type { CaptureSession, SelectedElementData, AnnotationData, CursorSampleData, VoiceSegment, ElementScreenshot } from '@shared/types'
 import { createEmptySession } from '@shared/types'
 
 export class SessionStore {
@@ -44,9 +44,9 @@ export class SessionStore {
     this.persist()
   }
 
-  setScreenshot(dataUrl: string): void {
+  addScreenshot(screenshot: ElementScreenshot): void {
     if (!this.session) return
-    this.session.screenshot = dataUrl
+    this.session.screenshots.push(screenshot)
     this.persist()
   }
 
