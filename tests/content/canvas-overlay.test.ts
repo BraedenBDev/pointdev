@@ -32,13 +32,26 @@ function createMockCanvas() {
   }
 }
 
+function createMockWindow(scrollX = 0, scrollY = 0) {
+  return {
+    innerWidth: 1200,
+    innerHeight: 800,
+    scrollX,
+    scrollY,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    requestAnimationFrame: vi.fn((cb: () => void) => { cb(); return 1 }),
+    cancelAnimationFrame: vi.fn(),
+  } as any
+}
+
 describe('CanvasOverlay', () => {
   it('creates canvas with correct attributes', () => {
     const mockDoc = {
       createElement: vi.fn(() => createMockCanvas()),
       body: { appendChild: vi.fn() },
     }
-    const overlay = new CanvasOverlay(mockDoc as any, { innerWidth: 1200, innerHeight: 800, scrollX: 0, scrollY: 0 } as any)
+    const overlay = new CanvasOverlay(mockDoc as any, createMockWindow())
     expect(mockDoc.createElement).toHaveBeenCalledWith('canvas')
   })
 
@@ -49,7 +62,7 @@ describe('CanvasOverlay', () => {
       body: { appendChild: vi.fn() },
       elementsFromPoint: vi.fn(() => []),
     }
-    const overlay = new CanvasOverlay(mockDoc as any, { innerWidth: 1200, innerHeight: 800, scrollX: 0, scrollY: 0 } as any)
+    const overlay = new CanvasOverlay(mockDoc as any, createMockWindow())
     overlay.setMode('circle')
 
     const annotation = overlay.completeAnnotation(
@@ -70,7 +83,7 @@ describe('CanvasOverlay', () => {
       body: { appendChild: vi.fn() },
       elementsFromPoint: vi.fn(() => []),
     }
-    const overlay = new CanvasOverlay(mockDoc as any, { innerWidth: 1200, innerHeight: 800, scrollX: 0, scrollY: 0 } as any)
+    const overlay = new CanvasOverlay(mockDoc as any, createMockWindow())
     overlay.setMode('arrow')
 
     const annotation = overlay.completeAnnotation(
@@ -90,7 +103,7 @@ describe('CanvasOverlay', () => {
       createElement: vi.fn(() => canvas),
       body: { appendChild: vi.fn() },
     }
-    const overlay = new CanvasOverlay(mockDoc as any, { innerWidth: 1200, innerHeight: 800, scrollX: 0, scrollY: 0 } as any)
+    const overlay = new CanvasOverlay(mockDoc as any, createMockWindow())
     overlay.setMode('select')
 
     const annotation = overlay.completeAnnotation(
@@ -99,5 +112,49 @@ describe('CanvasOverlay', () => {
       1000, 2300
     )
     expect(annotation).toBeNull()
+  })
+
+  it('stores page-relative coords and draws viewport-relative', () => {
+    const canvas = createMockCanvas()
+    const mockDoc = {
+      createElement: vi.fn(() => canvas),
+      body: { appendChild: vi.fn() },
+    }
+    const mockWin = createMockWindow(100, 200) // scrolled 100x, 200y
+    const overlay = new CanvasOverlay(mockDoc as any, mockWin)
+    overlay.setMode('circle')
+
+    const annotation = overlay.completeAnnotation(
+      { clientX: 50, clientY: 60 },
+      { clientX: 80, clientY: 90 },
+      1000, 2000
+    )
+
+    // Annotation data coordinates should be page-relative (viewport + scroll)
+    expect(annotation!.coordinates).toEqual({
+      centerX: 150, // 50 + 100
+      centerY: 260, // 60 + 200
+      radiusX: 30,
+      radiusY: 30,
+    })
+
+    // The ellipse drawn should be viewport-relative (page coords - current scroll)
+    // After completeAnnotation calls redraw, ellipse should be at (50, 60) = (150-100, 260-200)
+    expect(canvas.ctx.ellipse).toHaveBeenCalledWith(50, 60, 30, 30, 0, 0, Math.PI * 2)
+  })
+
+  it('registers and cleans up scroll listener', () => {
+    const canvas = createMockCanvas()
+    const mockDoc = {
+      createElement: vi.fn(() => canvas),
+      body: { appendChild: vi.fn() },
+    }
+    const mockWin = createMockWindow()
+    const overlay = new CanvasOverlay(mockDoc as any, mockWin)
+
+    expect(mockWin.addEventListener).toHaveBeenCalledWith('scroll', expect.any(Function), { passive: true })
+
+    overlay.destroy()
+    expect(mockWin.removeEventListener).toHaveBeenCalledWith('scroll', expect.any(Function))
   })
 })
