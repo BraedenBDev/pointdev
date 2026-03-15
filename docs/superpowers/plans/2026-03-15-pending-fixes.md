@@ -1,10 +1,10 @@
 # Pending Fixes — Post-MVP Testing
 
-> **Status:** Ready to implement. These were identified during manual E2E testing on 2026-03-15.
+> **Status:** Canvas scroll fix and message channel cleanup implemented in PR #5. Mic permission still untested.
 
 ---
 
-## PR: Fix canvas annotation scroll anchoring
+## ~~PR: Fix canvas annotation scroll anchoring~~ ✅ (PR #5)
 
 **Priority:** High — annotations are visually broken during scroll
 
@@ -24,7 +24,7 @@
 
 ---
 
-## PR: Fix message channel "closed before response" errors
+## ~~PR: Fix message channel "closed before response" errors~~ ✅ (PR #5)
 
 **Priority:** Medium — console noise, no functional impact
 

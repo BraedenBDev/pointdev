@@ -478,4 +478,46 @@
 - Fix canvas annotation scroll anchoring (highest priority)
 - Fix message channel broadcast noise
 - Verify microphone permission flow (getUserMedia + offscreen)
+
+---
+
+## Session 7 — 2026-03-15: Canvas Scroll Fix & Message Channel Cleanup
+
+**Model:** Claude Opus 4.6 (Anthropic, via Claude Code CLI)
+**Human lead:** Braeden Bihag
+**AI role:** Bug fixer, test author
+
+### What happened
+
+1. **Canvas annotation scroll anchoring fixed.** Implemented the plan from `docs/superpowers/plans/2026-03-15-pending-fixes.md`. Three changes to `src/content/canvas-overlay.ts`: (a) store page-relative coordinates in `drawnAnnotations` by adding `scrollX/Y` at draw time, (b) subtract current `scrollX/Y` in `redraw()` to convert back to viewport-relative for rendering, (c) add a `requestAnimationFrame`-throttled scroll listener that calls `redraw()` on every scroll event, cleaned up in `destroy()`.
+
+2. **Message channel noise eliminated.** Updated three files to only return `true` from `onMessage` for message types that listener actually handles:
+   - `src/background/service-worker.ts` — added `HANDLED_TYPES` set, returns `false` for unknown types
+   - `src/content/index.ts` — added `CONTENT_HANDLED` set, returns `false` for all cases (synchronous responses)
+   - `src/sidepanel/hooks/useCaptureSession.ts` — returns `false` for unhandled message types
+
+3. **Tests updated.** Added two new test cases to `tests/content/canvas-overlay.test.ts`: verifying page-relative coordinate storage with viewport-relative drawing, and scroll listener registration/cleanup lifecycle. Extracted `createMockWindow` helper.
+
+4. **PR #5 created.** Both fixes bundled into one PR since they were both from the same pending-fixes plan.
+
+### Decisions and rationale
+
+| Decision | Made by | Rationale |
+|---|---|---|
+| Bundle both fixes in one PR | AI | Both were in the same plan doc and both are small, focused fixes |
+| Use rAF throttle for scroll listener | AI (from plan) | Prevents jank from high-frequency scroll events |
+| Content script returns false (sync) | AI | All content script message handlers call sendResponse inline, no async needed |
+
+### What was AI-generated vs. human-authored
+
+- **AI-generated:** All code changes, test updates, PR description
+- **Human-directed:** Priority order (canvas first), decision to proceed from previous session's plan
+
+### Artifacts produced
+
+| Artifact | Path | Status |
+|---|---|---|
+| Canvas scroll fix | `src/content/canvas-overlay.ts` | PR #5 |
+| Message channel cleanup | 3 files (service-worker, content, useCaptureSession) | PR #5 |
+| Updated canvas tests | `tests/content/canvas-overlay.test.ts` | PR #5 |
 - Handle first-click content script injection failure gracefully
