@@ -8,6 +8,8 @@ The browser is the most universal interface on the internet, but there is no ope
 
 PointDev captures both technical context (CSS selectors, framework component names, DOM subtree, computed styles, page URL, viewport) and human context (voice transcript of what the user wants, visual annotations showing where the issue is, cursor behavior showing what they were looking at). A template formatter merges these into a single structured output that any AI coding agent can act on.
 
+Browser automation tools (Playwright, Puppeteer, Claude's computer use) solve a related but inverse problem: they give AI agents the ability to see and navigate web pages programmatically. PointDev solves the other direction. An agent that can read every DOM node still doesn't know what the human cares about, what they think is wrong, or what they want changed. PointDev externalizes human intent with the technical precision that AI agents need to act correctly. The two are complementary layers: PointDev captures what to do (human to machine), browser automation executes it (machine to browser).
+
 This proof of concept demonstrates the core capture-compile pipeline end-to-end.
 
 ---

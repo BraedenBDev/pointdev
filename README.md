@@ -10,6 +10,8 @@ You spot a bug in your browser. You switch to Claude Code and type "the font on 
 
 The DOM path, component name, computed styles, and your spatial intent are all lost. Every AI coding tool suffers from this input problem.
 
+Browser automation tools (Playwright, Puppeteer, Claude's computer use) solve the inverse: they give AI agents the ability to see and navigate pages programmatically. But an agent that can read every DOM node on your page still doesn't know that *you* think the hero font is too small, that *you* were pointing at the H1 when you said it, or that *you* circled it for emphasis. Intent is not on the page. Intent is in the human's head, and it needs a way out that carries technical precision with it.
+
 ## What PointDev Does
 
 PointDev captures technical context and human context at the same time.
