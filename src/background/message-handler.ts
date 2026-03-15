@@ -48,8 +48,7 @@ export async function handleMessage(
         const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true })
         if (activeTab?.id === session.tabId) {
           await chrome.tabs.sendMessage(session.tabId, { type: 'REMOVE_CAPTURE' })
-          // Brief delay for overlay removal
-          await new Promise(r => setTimeout(r, 50))
+          // REMOVE_CAPTURE response confirms overlay is destroyed; capture screenshot now
           const screenshot = await chrome.tabs.captureVisibleTab()
           store.setScreenshot(screenshot)
         } else {
