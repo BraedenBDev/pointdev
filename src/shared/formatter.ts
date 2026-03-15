@@ -62,29 +62,11 @@ function formatTargetElement(session: CaptureSession): string {
 function formatComputedStyles(styles: Record<string, string>): string {
   const result: string[] = []
 
-  // Reconstruct shorthand padding
-  const pt = styles['padding-top'], pr = styles['padding-right'],
-        pb = styles['padding-bottom'], pl = styles['padding-left']
-  if (pt && pr && pb && pl) {
-    if (pt === pr && pr === pb && pb === pl) {
-      result.push(`padding: ${pt}`)
-    } else {
-      result.push(`padding: ${pt} ${pr} ${pb} ${pl}`)
-    }
+  for (const prop of ['padding', 'margin']) {
+    const shorthand = reconstructShorthand(styles, prop)
+    if (shorthand) result.push(shorthand)
   }
 
-  // Reconstruct shorthand margin
-  const mt = styles['margin-top'], mr = styles['margin-right'],
-        mb = styles['margin-bottom'], ml = styles['margin-left']
-  if (mt && mr && mb && ml) {
-    if (mt === mr && mr === mb && mb === ml) {
-      result.push(`margin: ${mt}`)
-    } else {
-      result.push(`margin: ${mt} ${mr} ${mb} ${ml}`)
-    }
-  }
-
-  // Direct properties
   const directProps = ['font-size', 'font-weight', 'font-family', 'color', 'background-color',
                        'width', 'height', 'display', 'position']
   for (const prop of directProps) {
@@ -94,6 +76,19 @@ function formatComputedStyles(styles: Record<string, string>): string {
   }
 
   return result.join(', ')
+}
+
+function reconstructShorthand(styles: Record<string, string>, prop: string): string | null {
+  const top = styles[`${prop}-top`]
+  const right = styles[`${prop}-right`]
+  const bottom = styles[`${prop}-bottom`]
+  const left = styles[`${prop}-left`]
+  if (!top || !right || !bottom || !left) return null
+
+  if (top === right && right === bottom && bottom === left) {
+    return `${prop}: ${top}`
+  }
+  return `${prop}: ${top} ${right} ${bottom} ${left}`
 }
 
 function truncateDom(html: string): string {
@@ -111,18 +106,19 @@ function formatVoiceTranscript(session: CaptureSession): string {
 
 function formatAnnotations(session: CaptureSession): string {
   const lines = ['## Annotations']
-  session.annotations.forEach((ann, i) => {
+  for (let i = 0; i < session.annotations.length; i++) {
+    const ann = session.annotations[i]
     const ts = formatTimestamp(ann.timestampMs)
+    const target = ann.nearestElement || 'unknown element'
+
     if (ann.type === 'circle') {
       const c = ann.coordinates as CircleCoords
-      const target = ann.nearestElement || 'unknown element'
       lines.push(`${i + 1}. [${ts}] Circle around ${target} at (${c.centerX}, ${c.centerY}), radius ${c.radiusX}px`)
     } else {
       const a = ann.coordinates as ArrowCoords
-      const target = ann.nearestElement || 'unknown element'
       lines.push(`${i + 1}. [${ts}] Arrow from (${a.startX}, ${a.startY}) to (${a.endX}, ${a.endY}), pointing at ${target}`)
     }
-  })
+  }
   return lines.join('\n')
 }
 

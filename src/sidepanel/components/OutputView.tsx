@@ -11,13 +11,9 @@ interface OutputViewProps {
 
 export function OutputView({ session, onBack }: OutputViewProps) {
   const output = useMemo(() => {
-    // Compute dwells before formatting
-    const dwells = computeDwells(session.cursorTrace)
     const sessionWithDwells = {
       ...session,
-      cursorTrace: dwells.length > 0
-        ? [...session.cursorTrace.filter(s => s.dwellMs != null), ...dwells]
-        : session.cursorTrace,
+      cursorTrace: computeDwells(session.cursorTrace),
     }
     return formatSession(sessionWithDwells)
   }, [session])

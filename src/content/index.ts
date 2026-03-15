@@ -82,15 +82,16 @@ function handleMouseUp(e: MouseEvent) {
   drawStart = null
 
   if (annotation) {
-    // Resolve nearest element selector
-    const centerX = annotation.type === 'circle'
-      ? (annotation.coordinates as any).centerX - window.scrollX
-      : (annotation.coordinates as any).endX - window.scrollX
-    const centerY = annotation.type === 'circle'
-      ? (annotation.coordinates as any).centerY - window.scrollY
-      : (annotation.coordinates as any).endY - window.scrollY
+    // Resolve nearest element at the annotation's focal point
+    const coords = annotation.coordinates as Record<string, number>
+    const viewportX = annotation.type === 'circle'
+      ? coords.centerX - window.scrollX
+      : coords.endX - window.scrollX
+    const viewportY = annotation.type === 'circle'
+      ? coords.centerY - window.scrollY
+      : coords.endY - window.scrollY
 
-    const nearestEl = findNearestElement(centerX, centerY, document)
+    const nearestEl = findNearestElement(viewportX, viewportY, document)
     if (nearestEl && generateSelector) {
       annotation.nearestElement = generateSelector(nearestEl)
     }

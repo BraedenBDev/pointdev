@@ -47,14 +47,3 @@ function findUserComponent(fiber: any): ReactComponentInfo | null {
   }
   return null
 }
-
-export function detectVue(element: Element): boolean {
-  let el: Element | null = element
-  while (el) {
-    if ((el as any).__VUE__ || (el as any).__vue__) {
-      return true
-    }
-    el = el.parentElement
-  }
-  return false
-}
