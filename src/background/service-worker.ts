@@ -12,8 +12,15 @@ chrome.runtime.onInstalled.addListener(() => {
 // Restore session on worker restart
 store.restore()
 
-// Message handler
+// Message handler — only return true for types this context handles
+const HANDLED_TYPES = new Set([
+  'START_CAPTURE', 'STOP_CAPTURE', 'SET_MODE',
+  'TRANSCRIPT_UPDATE', 'ELEMENT_SELECTED', 'ANNOTATION_ADDED',
+  'CURSOR_BATCH', 'DEVICE_METADATA', 'SCREENSHOT_REQUEST',
+])
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (!HANDLED_TYPES.has(message.type)) return false
   handleMessage(message, store).then(response => {
     if (response) sendResponse(response)
   })

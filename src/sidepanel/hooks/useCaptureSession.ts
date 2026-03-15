@@ -11,7 +11,7 @@ export function useCaptureSession() {
   const portRef = useRef<chrome.runtime.Port | null>(null)
 
   useEffect(() => {
-    const listener = (message: Message) => {
+    const listener = (message: Message, _sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
       if (message.type === 'SESSION_UPDATED') {
         setSession(message.session)
         setState('capturing')
@@ -21,6 +21,8 @@ export function useCaptureSession() {
       } else if (message.type === 'CAPTURE_ERROR') {
         setError(message.error)
         setState('error')
+      } else {
+        return false // Not handled — don't hold channel open
       }
     }
 
