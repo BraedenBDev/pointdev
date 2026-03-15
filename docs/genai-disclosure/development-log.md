@@ -298,6 +298,110 @@
 | CONTRIBUTING | `CONTRIBUTING.md` | Complete |
 | MIT License | `LICENSE` | Complete |
 
-### Summary
+### Next steps
 
-The full MVP implementation sprint completed all 15 tasks from the plan in a single session. The extension captures element context (DOM, computed styles, React component names), voice narration (Web Speech API), canvas annotations (circles and arrows), and cursor dwell behavior — then compiles everything into a timestamped structured prompt for AI coding tools. 62 tests verify all modules. The build produces a loadable Chrome MV3 extension.
+- ~~Post-sprint code review~~ Done (Session 5)
+- ~~Post-sprint code simplification~~ Done (Session 5)
+- ~~Fix critical issues from review~~ Done (Session 5)
+- Manual testing in Chrome (Web Speech API validation, full capture flow)
+
+---
+
+## Session 5 — 2026-03-15: Code Review, Fixes, Repo Creation & PR
+
+**Model:** Claude Opus 4.6 (Anthropic, via Claude Code CLI)
+**Duration:** ~45 minutes
+**Human lead:** Braeden Bihag
+**AI role:** Code reviewer, code simplifier, bug fixer, repo setup
+
+### What happened
+
+1. **Parallel code review and simplification.** Two agents ran simultaneously after the implementation sprint:
+
+   **Code reviewer** found 3 critical, 8 important, and 6 minor issues:
+   - C1: Content script not bundled in build output (manifest.json missing `content_scripts` entry)
+   - C2: OutputView produced duplicate cursor trace data (filter-and-concat logic was wrong)
+   - C3: Screenshot taken before canvas overlay removal confirmed (fragile 50ms setTimeout)
+   - I7: SpeechRecognition `onresult` re-processed all previous results on every event, creating duplicate segments
+   - I9: Dark mode error message background hardcoded to light pink
+   - Other issues noted as acceptable for PoC (shallow copies in SessionStore, no HiDPI canvas scaling, approximate voice timestamps, no 500ms PING timeout)
+
+   **Code simplifier** made 7 targeted improvements across src/:
+   - Replaced `(this as any)` casts in CursorTracker with properly typed private fields
+   - Consolidated duplicated stroke style assignments in CanvasOverlay into `applyStrokeStyle` method
+   - Removed dead `detectVue` export from react-inspector (never called)
+   - Extracted `reconstructShorthand` helper in formatter to eliminate duplicated padding/margin logic
+   - Fixed the same OutputView dwell duplication bug independently
+   - Simplified CopyButton by deduplicating the setCopied logic
+   - Net result: -24 lines
+
+2. **Critical fixes applied.** Four issues fixed in a single commit:
+   - Added `content_scripts` entry to manifest.json so CRXJS bundles the content script
+   - Fixed SpeechRecognition `onresult` to track processed result index (`processedResultsRef`), preventing duplicate segment creation
+   - Removed fragile 50ms screenshot delay, relying on `REMOVE_CAPTURE` message response confirmation
+   - Fixed dark mode error background using `color-mix(in srgb, var(--danger) 10%, var(--bg))`
+
+3. **README rewrite.** Braeden requested a clearer, more concise README. The rewrite improved readability and structure:
+   - Replaced repetitive bullet-dash patterns with tables in "What PointDev Does" section
+   - Limitations section uses bold headings + sentences for scannability
+   - Disclosure section uses prose paragraphs instead of bullet lists
+   - Tech stack collapsed to a single line
+   - Tightened language throughout
+
+4. **GitHub repository created.** Public repo at `github.com/BraedenBDev/pointdev` (to be transferred to `AlmostaLab` org when permissions allow). Main branch pushed with full commit history.
+
+5. **First pull request created.** PR #1 (`feat/mvp-implementation`) merged to main via GitHub, containing all 16 implementation commits.
+
+### Decisions and rationale
+
+| Decision | Made by | Rationale |
+|---|---|---|
+| Fix critical issues before PR | AI (quality gate) | Content script not bundling is a showstopper; SpeechRecognition duplicates corrupt output |
+| Accept PoC-level issues (shallow copies, no HiDPI, approximate timestamps) | Braeden (implicit) | These don't affect the demo; real fixes belong in post-funding milestones |
+| Rewrite README for clarity | Braeden | README is the first thing reviewers see; it should be concise and scannable |
+| Create repo under BraedenBDev (not AlmostaLab) | Braeden | GitHub auth didn't have org permissions; repo can be transferred later |
+| Commit README rewrite directly to main | Braeden | Not a code change, no review needed |
+
+### What was AI-generated vs. human-authored
+
+- **AI-generated:** Code review report, all code fixes, code simplification refactors, README rewrite, PR description, commit messages
+- **Human-directed:** Decision to rewrite README for clarity, decision to create repo under personal account, decision to commit directly to main
+- **AI-identified, human-approved (implicit):** Which review issues to fix vs. accept for PoC, content_scripts manifest fix approach
+
+### Artifacts produced
+
+| Artifact | Path | Status |
+|---|---|---|
+| Code review fixes | `src/manifest.json`, `src/sidepanel/hooks/useSpeechRecognition.ts`, `src/background/message-handler.ts`, `src/sidepanel/styles.css` | Committed |
+| Code simplification | 7 files across `src/` | Committed |
+| README rewrite | `README.md` | Committed to main |
+| GitHub repository | `github.com/BraedenBDev/pointdev` | Public, live |
+| Pull request #1 | `github.com/BraedenBDev/pointdev/pull/1` | Merged |
+
+---
+
+## MVP Summary
+
+**Total development time:** ~5 hours across 5 sessions on 2026-03-15
+
+**What was built:** A Chrome MV3 extension (proof of concept) that captures structured browser context through simultaneous voice narration, canvas annotation, element selection, and cursor tracking, then compiles it into a structured prompt for AI coding agents.
+
+**Commit history:** 18 commits on `feat/mvp-implementation`, merged to `main` via PR #1, plus 1 post-merge README commit.
+
+**Test coverage:** 62 unit tests across 10 test files. All passing.
+
+**Code authorship breakdown:**
+- ~95% of source code was AI-generated (Claude Opus 4.6 via Claude Code CLI subagents)
+- 100% of architectural decisions, scoping, and product direction by Braeden Bihag
+- All code reviewed by automated code reviewer + code simplifier agents, with critical issues fixed before merge
+- All AI-generated commits tagged with `Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>`
+
+**Development methodology:** TDD with AI subagents. Human lead defined acceptance criteria and architecture in a design spec. Implementation plan decomposed the spec into 15 tasks. Up to 6 AI subagents executed tasks in parallel, each following write-test-implement-verify-commit. Post-sprint review by separate code reviewer and code simplifier agents.
+
+**What remains for manual validation:**
+- Load unpacked extension in Chrome and test full capture flow
+- Confirm Web Speech API works in sidepanel context (highest-risk assumption)
+- Test React component detection on a dev-mode React page
+- Test on non-React pages for graceful fallback
+
+**Repository:** https://github.com/BraedenBDev/pointdev (public, MIT license)
