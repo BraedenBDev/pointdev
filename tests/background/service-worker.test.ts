@@ -6,8 +6,9 @@ import { SessionStore } from '../../src/background/session-store'
 vi.stubGlobal('chrome', {
   tabs: {
     query: vi.fn().mockResolvedValue([{ id: 1, url: 'https://example.com', title: 'Test' }]),
+    get: vi.fn().mockResolvedValue({ id: 1, url: 'https://example.com', title: 'Test', width: 1200, height: 800 }),
     captureVisibleTab: vi.fn().mockResolvedValue('data:image/png;base64,abc'),
-    sendMessage: vi.fn().mockResolvedValue(undefined),
+    sendMessage: vi.fn().mockResolvedValue({ ok: true, url: 'https://example.com', title: 'Test', viewport: { width: 1200, height: 800 } }),
   },
   scripting: {
     executeScript: vi.fn().mockResolvedValue(undefined),

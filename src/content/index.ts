@@ -162,7 +162,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     case 'INJECT_CAPTURE':
       startCapture()
       chrome.runtime.sendMessage({ type: 'DEVICE_METADATA', data: collectDeviceMetadata(window) })
-      sendResponse({ ok: true })
+      sendResponse({
+        ok: true,
+        url: window.location.href,
+        title: document.title,
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+      })
       break
     case 'REMOVE_CAPTURE':
       stopCapture()

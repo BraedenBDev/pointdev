@@ -9,12 +9,14 @@ export async function handleMessage(
     case 'START_CAPTURE': {
       console.log('[PointDev] START_CAPTURE received')
       const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
-      console.log('[PointDev] tabs.query result:', JSON.stringify(tabs.map(t => ({ id: t.id, url: t.url?.slice(0, 50) }))))
       const tab = tabs[0]
-      if (!tab?.id || !tab.url) {
+      if (!tab?.id) {
         console.error('[PointDev] No active tab found')
         return { type: 'CAPTURE_ERROR', error: 'No active tab found' }
       }
+      // activeTab doesn't populate url in tabs.query — get it via tabs.get
+      const fullTab = await chrome.tabs.get(tab.id)
+      console.log('[PointDev] Tab:', fullTab.id, fullTab.url?.slice(0, 60))
 
       // Content script is declaratively injected via manifest content_scripts.
       // Send PING to verify it's ready.
@@ -26,20 +28,22 @@ export async function handleMessage(
         return { type: 'CAPTURE_ERROR', error: 'Content script not loaded. Try reloading the page.' }
       }
 
-      const session = store.startSession(
-        tab.id,
-        tab.url,
-        tab.title || '',
-        { width: tab.width || 1200, height: tab.height || 800 }
-      )
-
+      // Send INJECT_CAPTURE and get page info from content script response
+      let pageInfo: any
       try {
-        await chrome.tabs.sendMessage(tab.id, { type: 'INJECT_CAPTURE', tabId: tab.id })
-        console.log('[PointDev] INJECT_CAPTURE sent successfully')
+        pageInfo = await chrome.tabs.sendMessage(tab.id, { type: 'INJECT_CAPTURE', tabId: tab.id })
+        console.log('[PointDev] INJECT_CAPTURE response:', JSON.stringify(pageInfo))
       } catch (e) {
         console.error('[PointDev] INJECT_CAPTURE failed:', e)
         return { type: 'CAPTURE_ERROR', error: 'Failed to start capture on this page.' }
       }
+
+      const session = store.startSession(
+        tab.id,
+        pageInfo?.url || fullTab.url || '',
+        pageInfo?.title || fullTab.title || '',
+        pageInfo?.viewport || { width: fullTab.width || 1200, height: fullTab.height || 800 }
+      )
       return { type: 'SESSION_UPDATED', session }
     }
 
