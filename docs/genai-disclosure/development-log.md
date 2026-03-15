@@ -213,6 +213,91 @@
 
 ### Next steps
 
-- Execute Task 2 (shared types and message definitions)
-- Execute Task 3 (Web Speech API spike)
-- Continue with remaining Chunk 1 tasks
+- ~~Execute Task 2 (shared types and message definitions)~~ Done
+- ~~Execute Task 3 (Web Speech API spike)~~ Done
+- ~~Continue with remaining Chunk 1 tasks~~ Done
+
+---
+
+## Session 4 — 2026-03-15: Full MVP Implementation Sprint (Tasks 1–15)
+
+**Model:** Claude Opus 4.6 (Anthropic, via Claude Code CLI)
+**Duration:** ~3 hours
+**Human lead:** Braeden Bihag
+**AI role:** Implementation agent, test author, build verifier
+
+### What happened
+
+1. **All 15 tasks from the implementation plan completed.** The full MVP was implemented in a single sprint session, covering all four chunks of the plan:
+   - **Chunk 1 (Tasks 1–3):** Project scaffold with MV3 + Vite + CRXJS build, shared types and message definitions, Web Speech API spike with `useSpeechRecognition` hook
+   - **Chunk 2 (Tasks 4–7):** SessionStore for capture state management, template formatter, service worker message routing, React fiber inspector
+   - **Chunk 3 (Tasks 8–11):** Element selector with computed styles extraction, canvas annotation overlay (circle + arrow), cursor tracker with dwell detection, content script coordinator
+   - **Chunk 4 (Tasks 12–15):** Sidepanel UI with capture controls, live feedback, output view, copy-to-clipboard, README/CONTRIBUTING/LICENSE
+
+2. **Parallel execution with 6 subagents.** Chunks 2 and 3 were dispatched to 6 parallel subagents for concurrent implementation. Each subagent followed TDD: write failing tests, implement to pass, verify, commit.
+
+3. **Key implementation decisions made during sprint:**
+   - **No worktree isolation.** Git worktrees were attempted but failed due to environment constraints. Fell back to file-scoped parallelism — each subagent worked on independent files within the same working tree, avoiding conflicts.
+   - **Incremental transcript sending.** The `useSpeechRecognition` hook sends transcript segments incrementally to the service worker via `TRANSCRIPT_UPDATE` messages, rather than batching at session end.
+   - **`computeDwells` moved to shared.** Dwell computation logic was placed in `src/shared/dwell.ts` rather than in the content script, since both content script (cursor tracking) and service worker (session compilation) need access to dwell logic.
+   - **CRXJS 2.3.0 (stable).** Used instead of the beta specified in the plan, as the beta was unavailable. Works correctly with Vite 8.
+
+4. **Test suite: 62 tests across 10 test files.** All passing:
+   - `tests/shared/types.test.ts` — type guard and validation tests
+   - `tests/shared/dwell.test.ts` — dwell computation from cursor samples
+   - `tests/shared/formatter.test.ts` — template formatter output verification
+   - `tests/background/session-store.test.ts` — SessionStore state management
+   - `tests/background/service-worker.test.ts` — message routing and session lifecycle
+   - `tests/sidepanel/hooks/useSpeechRecognition.test.ts` — Web Speech API hook
+   - `tests/content/element-selector.test.ts` — DOM inspection and style extraction
+   - `tests/content/canvas-overlay.test.ts` — canvas annotation rendering
+   - `tests/content/cursor-tracker.test.ts` — mousemove sampling and batching
+   - `tests/content/react-inspector.test.ts` — React fiber component detection
+
+5. **Build verified clean.** `pnpm build` produces a valid dist/ folder with manifest.json, service worker loader, sidepanel HTML, bundled assets, and icons. No TypeScript errors, no build warnings (aside from harmless CRXJS rollupOptions/rolldownOptions deprecation notices).
+
+6. **Documentation finalized.** README.md copied from draft, CONTRIBUTING.md copied from draft, MIT LICENSE created with "2026 Almost a Lab S.L." copyright.
+
+### Decisions and rationale
+
+| Decision | Made by | Rationale |
+|---|---|---|
+| Fall back to file-scoped parallelism (no worktrees) | AI (pragmatic) | Worktree creation failed; file-scoped approach avoids merge conflicts since tasks target independent files |
+| Incremental transcript sending | AI (design choice) | Matches real-time UX — sidepanel shows live transcript, service worker correlates with cursor/annotation timestamps |
+| computeDwells in shared/ | AI (architecture) | Both content script and service worker need dwell logic; shared module avoids duplication |
+| CRXJS 2.3.0 stable | AI (pragmatic) | Beta unavailable, stable release compatible with Vite 8 |
+| 6 parallel subagents for Chunks 2–3 | Braeden (workflow) | Maximize throughput; independent file targets enable safe parallelism |
+
+### What was AI-generated vs. human-authored
+
+- **AI-generated:** All 20 source files, all 10 test files, all build configuration, LICENSE text, commit messages
+- **Human-directed:** Implementation plan (Session 2), parallel execution strategy, sprint workflow, all architectural decisions from design spec (Session 1)
+- **AI-decided (within human-defined constraints):** Worktree fallback strategy, dwell module placement, incremental transcript pattern, CRXJS version selection
+
+### Artifacts produced
+
+| Artifact | Path | Status |
+|---|---|---|
+| Shared types | `src/shared/types.ts`, `src/shared/messages.ts` | Complete |
+| Dwell computation | `src/shared/dwell.ts` | Complete |
+| Template formatter | `src/shared/formatter.ts` | Complete |
+| Session store | `src/background/session-store.ts` | Complete |
+| Message handler | `src/background/message-handler.ts` | Complete |
+| Service worker | `src/background/service-worker.ts` | Complete |
+| Element selector | `src/content/element-selector.ts` | Complete |
+| Canvas overlay | `src/content/canvas-overlay.ts` | Complete |
+| Cursor tracker | `src/content/cursor-tracker.ts` | Complete |
+| React inspector | `src/content/react-inspector.ts` | Complete |
+| Content coordinator | `src/content/index.ts` | Complete |
+| Speech recognition hook | `src/sidepanel/hooks/useSpeechRecognition.ts` | Complete |
+| Capture session hook | `src/sidepanel/hooks/useCaptureSession.ts` | Complete |
+| Sidepanel components | `src/sidepanel/components/CaptureControls.tsx`, `LiveFeedback.tsx`, `OutputView.tsx`, `CopyButton.tsx` | Complete |
+| Sidepanel app | `src/sidepanel/App.tsx` | Complete |
+| Test suite (62 tests) | `tests/**/*.test.ts` (10 files) | All passing |
+| README | `README.md` | Complete |
+| CONTRIBUTING | `CONTRIBUTING.md` | Complete |
+| MIT License | `LICENSE` | Complete |
+
+### Summary
+
+The full MVP implementation sprint completed all 15 tasks from the plan in a single session. The extension captures element context (DOM, computed styles, React component names), voice narration (Web Speech API), canvas annotations (circles and arrows), and cursor dwell behavior — then compiles everything into a timestamped structured prompt for AI coding tools. 62 tests verify all modules. The build produces a loadable Chrome MV3 extension.
