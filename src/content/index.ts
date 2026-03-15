@@ -153,12 +153,16 @@ function stopCapture() {
   }
 }
 
-// Message listener
+// Message listener — only return true for types this context handles
+const CONTENT_HANDLED = new Set(['PING', 'INJECT_CAPTURE', 'REMOVE_CAPTURE', 'MODE_CHANGED'])
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (!CONTENT_HANDLED.has(message.type)) return false
+
   switch (message.type) {
     case 'PING':
       sendResponse({ type: 'PONG' })
-      break
+      return false // synchronous response
     case 'INJECT_CAPTURE':
       startCapture()
       chrome.runtime.sendMessage({ type: 'DEVICE_METADATA', data: collectDeviceMetadata(window) })
@@ -168,16 +172,15 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         title: document.title,
         viewport: { width: window.innerWidth, height: window.innerHeight },
       })
-      break
+      return false // synchronous response
     case 'REMOVE_CAPTURE':
       stopCapture()
       sendResponse({ ok: true })
-      break
+      return false // synchronous response
     case 'MODE_CHANGED':
       currentMode = message.mode
       if (overlay) overlay.setMode(message.mode)
       sendResponse({ ok: true })
-      break
+      return false // synchronous response
   }
-  return true
 })

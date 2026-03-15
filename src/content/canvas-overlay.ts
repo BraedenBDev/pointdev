@@ -1,4 +1,4 @@
-import type { AnnotationData, CircleCoords, ArrowCoords } from '@shared/types'
+import type { AnnotationData } from '@shared/types'
 import type { CaptureMode } from '@shared/messages'
 
 const STROKE_COLOR = '#FF3333'
@@ -7,13 +7,20 @@ const ARROW_HEAD_SIZE = 12
 
 interface Point { clientX: number; clientY: number }
 
+interface StoredCircle { type: 'circle'; cx: number; cy: number; rx: number; ry: number }
+interface StoredArrow { type: 'arrow'; sx: number; sy: number; ex: number; ey: number }
+type StoredAnnotation = StoredCircle | StoredArrow
+
 export class CanvasOverlay {
   private canvas: HTMLCanvasElement
   private ctx: CanvasRenderingContext2D
   private mode: CaptureMode = 'select'
   private doc: Document
   private win: Window
-  private drawnAnnotations: Array<{ type: 'circle' | 'arrow'; data: any }> = []
+  // Stored as page-relative coordinates (viewport + scroll at draw time)
+  private drawnAnnotations: StoredAnnotation[] = []
+  private scrollRAF: number | null = null
+  private boundOnScroll: () => void
 
   constructor(doc: Document, win: Window) {
     this.doc = doc
@@ -37,6 +44,16 @@ export class CanvasOverlay {
 
     this.ctx = this.canvas.getContext('2d')!
     doc.body.appendChild(this.canvas)
+
+    // Redraw on scroll so annotations follow the page content
+    this.boundOnScroll = () => {
+      if (this.scrollRAF) return
+      this.scrollRAF = win.requestAnimationFrame(() => {
+        this.scrollRAF = null
+        this.redraw()
+      })
+    }
+    win.addEventListener('scroll', this.boundOnScroll, { passive: true })
   }
 
   setMode(mode: CaptureMode): void {
@@ -86,21 +103,14 @@ export class CanvasOverlay {
 
       if (rx < 5 && ry < 5) return null // too small
 
-      this.drawnAnnotations.push({ type: 'circle', data: { cx, cy, rx, ry } })
+      // Store page-relative so annotations follow the page on scroll
+      this.drawnAnnotations.push({ type: 'circle', cx: cx + scrollX, cy: cy + scrollY, rx, ry })
       this.redraw()
 
-      const coordinates: CircleCoords = {
-        centerX: cx + scrollX,
-        centerY: cy + scrollY,
-        radiusX: rx,
-        radiusY: ry,
-      }
-
       return {
-        type: 'circle',
-        coordinates,
+        type: 'circle' as const,
+        coordinates: { centerX: cx + scrollX, centerY: cy + scrollY, radiusX: rx, radiusY: ry },
         timestampMs,
-        // nearestElement resolved by caller (content script coordinator) using css-selector-generator
       }
     }
 
@@ -111,21 +121,16 @@ export class CanvasOverlay {
       const dist = Math.sqrt((ex - sx) ** 2 + (ey - sy) ** 2)
       if (dist < 10) return null // too small
 
-      this.drawnAnnotations.push({ type: 'arrow', data: { sx, sy, ex, ey } })
+      // Store page-relative so annotations follow the page on scroll
+      this.drawnAnnotations.push({
+        type: 'arrow', sx: sx + scrollX, sy: sy + scrollY, ex: ex + scrollX, ey: ey + scrollY,
+      })
       this.redraw()
 
-      const coordinates: ArrowCoords = {
-        startX: sx + scrollX,
-        startY: sy + scrollY,
-        endX: ex + scrollX,
-        endY: ey + scrollY,
-      }
-
       return {
-        type: 'arrow',
-        coordinates,
+        type: 'arrow' as const,
+        coordinates: { startX: sx + scrollX, startY: sy + scrollY, endX: ex + scrollX, endY: ey + scrollY },
         timestampMs,
-        // nearestElement resolved by caller (content script coordinator) using css-selector-generator
       }
     }
 
@@ -135,11 +140,14 @@ export class CanvasOverlay {
   private redraw(): void {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
     this.applyStrokeStyle()
+    const sx = this.win.scrollX
+    const sy = this.win.scrollY
     for (const ann of this.drawnAnnotations) {
       if (ann.type === 'circle') {
-        this.drawEllipse(ann.data.cx, ann.data.cy, ann.data.rx, ann.data.ry)
+        // Convert page-relative back to viewport-relative for drawing
+        this.drawEllipse(ann.cx - sx, ann.cy - sy, ann.rx, ann.ry)
       } else {
-        this.drawArrow(ann.data.sx, ann.data.sy, ann.data.ex, ann.data.ey)
+        this.drawArrow(ann.sx - sx, ann.sy - sy, ann.ex - sx, ann.ey - sy)
       }
     }
   }
@@ -175,6 +183,10 @@ export class CanvasOverlay {
   }
 
   destroy(): void {
+    this.win.removeEventListener('scroll', this.boundOnScroll)
+    if (this.scrollRAF) {
+      this.win.cancelAnimationFrame(this.scrollRAF)
+    }
     this.canvas.remove()
   }
 }
