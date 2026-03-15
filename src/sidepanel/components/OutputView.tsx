@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import type { CaptureSession } from '@shared/types'
 import { formatSession } from '@shared/formatter'
-import { computeDwells } from '@shared/dwell'
+import { computeDwells, collapseDwells } from '@shared/dwell'
 import { CopyButton } from './CopyButton'
 
 interface OutputViewProps {
@@ -13,7 +13,7 @@ export function OutputView({ session, onBack }: OutputViewProps) {
   const output = useMemo(() => {
     const sessionWithDwells = {
       ...session,
-      cursorTrace: computeDwells(session.cursorTrace),
+      cursorTrace: collapseDwells(computeDwells(session.cursorTrace)),
     }
     return formatSession(sessionWithDwells)
   }, [session])
