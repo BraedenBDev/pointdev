@@ -1,4 +1,4 @@
-import type { CaptureSession, SelectedElementData, AnnotationData, CursorSampleData, VoiceSegment, ElementScreenshot } from '@shared/types'
+import type { CaptureSession, SelectedElementData, AnnotationData, CursorSampleData, VoiceSegment, ElementScreenshot, DeviceMetadata } from '@shared/types'
 import { createEmptySession } from '@shared/types'
 
 export class SessionStore {
@@ -41,6 +41,12 @@ export class SessionStore {
   addCursorBatch(samples: CursorSampleData[]): void {
     if (!this.session) return
     this.session.cursorTrace.push(...samples)
+    this.persist()
+  }
+
+  setDeviceMetadata(device: DeviceMetadata): void {
+    if (!this.session) return
+    this.session.device = device
     this.persist()
   }
 

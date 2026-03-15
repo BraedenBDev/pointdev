@@ -1,4 +1,4 @@
-import type { SelectedElementData, AnnotationData, CursorSampleData, VoiceSegment, CaptureSession, ElementScreenshot } from './types'
+import type { SelectedElementData, AnnotationData, CursorSampleData, VoiceSegment, CaptureSession, ElementScreenshot, DeviceMetadata } from './types'
 
 export type Message =
   // Sidepanel → Service Worker
@@ -18,6 +18,7 @@ export type Message =
   | { type: 'ANNOTATION_ADDED'; data: AnnotationData }
   | { type: 'CURSOR_BATCH'; data: CursorSampleData[] }
   | { type: 'SCREENSHOT_REQUEST'; data: { selector: string; rect: { x: number; y: number; width: number; height: number }; timestampMs: number } }
+  | { type: 'DEVICE_METADATA'; data: DeviceMetadata }
   | { type: 'PONG' }
 
   // Service Worker → Content Script (response)

@@ -10,6 +10,7 @@ function makeSession(overrides: Partial<CaptureSession> = {}): CaptureSession {
     url: 'https://example.com/page',
     title: 'Example Page',
     viewport: { width: 1200, height: 800 },
+    device: null,
     selectedElement: null,
     voiceRecording: null,
     annotations: [],
@@ -203,7 +204,6 @@ describe('formatSession', () => {
     expect(output).toContain('## Screenshots')
     expect(output).toContain('1. [00:05] div.hero > h1 (340x50px)')
     expect(output).toContain('2. [00:12] nav > a.pricing (120x30px)')
-    // base64 data should NOT appear in formatted output
     expect(output).not.toContain('base64,abc')
     expect(output).not.toContain('base64,xyz')
   })
@@ -211,5 +211,52 @@ describe('formatSession', () => {
   it('omits Screenshots section when no screenshots', () => {
     const output = formatSession(makeSession())
     expect(output).not.toContain('## Screenshots')
+  })
+
+  it('includes Device section when device metadata is present', () => {
+    const output = formatSession(makeSession({
+      device: {
+        userAgent: 'Mozilla/5.0 Chrome/120.0.0.0',
+        browser: { name: 'Chrome', version: '120.0.0.0' },
+        os: 'MacIntel',
+        language: 'en-US',
+        screen: { width: 2560, height: 1440 },
+        window: { innerWidth: 1280, innerHeight: 800, outerWidth: 1440, outerHeight: 900 },
+        devicePixelRatio: 2,
+        touchSupport: false,
+        colorScheme: 'dark',
+      },
+    }))
+    expect(output).toContain('## Device')
+    expect(output).toContain('Browser: Chrome 120.0.0.0')
+    expect(output).toContain('OS: MacIntel')
+    expect(output).toContain('Screen: 2560 x 1440px')
+    expect(output).toContain('Pixel ratio: 2x')
+    expect(output).toContain('Language: en-US')
+    expect(output).toContain('Color scheme: dark')
+    expect(output).not.toContain('Touch')
+  })
+
+  it('omits Device section when no device metadata', () => {
+    const output = formatSession(makeSession())
+    expect(output).not.toContain('## Device')
+  })
+
+  it('shows touch support when enabled', () => {
+    const output = formatSession(makeSession({
+      device: {
+        userAgent: 'Mozilla/5.0',
+        browser: { name: 'Chrome', version: '120' },
+        os: 'Linux',
+        language: 'en',
+        screen: { width: 1920, height: 1080 },
+        window: { innerWidth: 1920, innerHeight: 1080, outerWidth: 1920, outerHeight: 1080 },
+        devicePixelRatio: 1,
+        touchSupport: true,
+        colorScheme: 'unknown',
+      },
+    }))
+    expect(output).toContain('Touch: supported')
+    expect(output).not.toContain('Color scheme')
   })
 })

@@ -1,3 +1,15 @@
+export interface DeviceMetadata {
+  userAgent: string
+  browser: { name: string; version: string }
+  os: string
+  language: string
+  screen: { width: number; height: number }
+  window: { innerWidth: number; innerHeight: number; outerWidth: number; outerHeight: number }
+  devicePixelRatio: number
+  touchSupport: boolean
+  colorScheme: 'light' | 'dark' | 'unknown'
+}
+
 export interface CaptureSession {
   id: string
   tabId: number
@@ -5,6 +17,7 @@ export interface CaptureSession {
   url: string
   title: string
   viewport: { width: number; height: number }
+  device: DeviceMetadata | null
 
   selectedElement: SelectedElementData | null
 
@@ -85,6 +98,7 @@ export function createEmptySession(id: string, tabId: number, url: string, title
     url,
     title,
     viewport,
+    device: null,
     selectedElement: null,
     voiceRecording: null,
     annotations: [],
