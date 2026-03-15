@@ -7,25 +7,23 @@ export async function handleMessage(
 ): Promise<any> {
   switch (message.type) {
     case 'START_CAPTURE': {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+      console.log('[PointDev] START_CAPTURE received')
+      const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+      console.log('[PointDev] tabs.query result:', JSON.stringify(tabs.map(t => ({ id: t.id, url: t.url?.slice(0, 50) }))))
+      const tab = tabs[0]
       if (!tab?.id || !tab.url) {
+        console.error('[PointDev] No active tab found')
         return { type: 'CAPTURE_ERROR', error: 'No active tab found' }
       }
 
-      // Inject content script (with PING guard)
+      // Content script is declaratively injected via manifest content_scripts.
+      // Send PING to verify it's ready.
       try {
         await chrome.tabs.sendMessage(tab.id, { type: 'PING' })
-        // Content script already present
-      } catch {
-        // Not present, inject
-        try {
-          await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            files: ['content/index.js'],
-          })
-        } catch (e) {
-          return { type: 'CAPTURE_ERROR', error: 'Cannot capture on this page.' }
-        }
+        console.log('[PointDev] Content script responded to PING')
+      } catch (e) {
+        console.error('[PointDev] Content script not responding:', e)
+        return { type: 'CAPTURE_ERROR', error: 'Content script not loaded. Try reloading the page.' }
       }
 
       const session = store.startSession(
@@ -35,7 +33,13 @@ export async function handleMessage(
         { width: tab.width || 1200, height: tab.height || 800 }
       )
 
-      await chrome.tabs.sendMessage(tab.id, { type: 'INJECT_CAPTURE', tabId: tab.id })
+      try {
+        await chrome.tabs.sendMessage(tab.id, { type: 'INJECT_CAPTURE', tabId: tab.id })
+        console.log('[PointDev] INJECT_CAPTURE sent successfully')
+      } catch (e) {
+        console.error('[PointDev] INJECT_CAPTURE failed:', e)
+        return { type: 'CAPTURE_ERROR', error: 'Failed to start capture on this page.' }
+      }
       return { type: 'SESSION_UPDATED', session }
     }
 
