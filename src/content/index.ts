@@ -2,6 +2,7 @@ import { CanvasOverlay } from './canvas-overlay'
 import { CursorTracker } from './cursor-tracker'
 import { extractElementData, findNearestElement } from './element-selector'
 import { inspectReactComponent } from './react-inspector'
+import { collectDeviceMetadata } from './device-metadata'
 import type { CaptureMode } from '@shared/messages'
 
 // Use dynamic import of css-selector-generator to keep it tree-shakeable
@@ -160,6 +161,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       break
     case 'INJECT_CAPTURE':
       startCapture()
+      chrome.runtime.sendMessage({ type: 'DEVICE_METADATA', data: collectDeviceMetadata(window) })
       sendResponse({ ok: true })
       break
     case 'REMOVE_CAPTURE':

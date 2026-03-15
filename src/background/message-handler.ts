@@ -82,7 +82,11 @@ export async function handleMessage(
 
     case 'CURSOR_BATCH': {
       store.addCursorBatch(message.data)
-      // No SESSION_UPDATED for cursor batches (too noisy)
+      return undefined
+    }
+
+    case 'DEVICE_METADATA': {
+      store.setDeviceMetadata(message.data)
       return undefined
     }
 

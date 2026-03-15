@@ -5,6 +5,10 @@ export function formatSession(session: CaptureSession): string {
 
   sections.push(formatContext(session))
 
+  if (session.device) {
+    sections.push(formatDevice(session))
+  }
+
   if (session.selectedElement) {
     sections.push(formatTargetElement(session))
   }
@@ -37,6 +41,22 @@ function formatContext(session: CaptureSession): string {
     `- Viewport: ${session.viewport.width} x ${session.viewport.height}px`,
     `- Captured at: ${new Date(session.startedAt).toISOString().replace('T', ' ').slice(0, 19)}`,
   ]
+  return lines.join('\n')
+}
+
+function formatDevice(session: CaptureSession): string {
+  const d = session.device!
+  const lines = [
+    '## Device',
+    `- Browser: ${d.browser.name} ${d.browser.version}`,
+    `- OS: ${d.os}`,
+    `- Screen: ${d.screen.width} x ${d.screen.height}px`,
+    `- Window: ${d.window.innerWidth} x ${d.window.innerHeight}px (outer: ${d.window.outerWidth} x ${d.window.outerHeight}px)`,
+    `- Pixel ratio: ${d.devicePixelRatio}x`,
+    `- Language: ${d.language}`,
+  ]
+  if (d.touchSupport) lines.push('- Touch: supported')
+  if (d.colorScheme !== 'unknown') lines.push(`- Color scheme: ${d.colorScheme}`)
   return lines.join('\n')
 }
 

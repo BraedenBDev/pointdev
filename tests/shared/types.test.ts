@@ -11,6 +11,7 @@ describe('CaptureSession types', () => {
       url: 'https://example.com',
       title: 'Test',
       viewport: { width: 1200, height: 800 },
+      device: null,
       selectedElement: null,
       voiceRecording: null,
       annotations: [],
@@ -29,6 +30,7 @@ describe('CaptureSession types', () => {
       url: 'https://example.com',
       title: 'Test',
       viewport: { width: 1200, height: 800 },
+      device: null,
       selectedElement: {
         selector: 'div.hero > h1',
         computedStyles: { 'font-size': '32px' },
