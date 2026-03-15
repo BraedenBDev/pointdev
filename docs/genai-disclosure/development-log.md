@@ -148,6 +148,71 @@
 
 ### Next steps
 
-- Initialize git repo and feature branch
+- ~~Initialize git repo and feature branch~~ Done
 - Execute Chunk 1 (scaffold, types, Speech API spike) via parallel subagents
 - Sprint review after Chunk 1 completion
+
+---
+
+## Session 3 — 2026-03-15: Task 1 — Project Scaffold & MV3 Build
+
+**Model:** Claude Opus 4.6 (Anthropic, via Claude Code CLI)
+**Human lead:** Braeden Bihag
+**AI role:** Implementation agent (executing Task 1 from implementation plan)
+
+### What happened
+
+1. **Initialized bun project.** Ran `bun init` in the project root.
+
+2. **Installed all dependencies.** React 19, React DOM 19 as production deps. TypeScript, Vite 8, @crxjs/vite-plugin 2.3.0, @vitejs/plugin-react, Vitest, @testing-library/react, @testing-library/jest-dom, jsdom, @types/chrome, @types/react, @types/react-dom, css-selector-generator, eslint, prettier as dev deps.
+
+3. **CRXJS version resolution.** The plan specified `@crxjs/vite-plugin@beta` (2.0.0-beta.27), which was unavailable. Beta.33 was deprecated. Used stable 2.3.0, which works correctly with Vite 8.
+
+4. **Created project scaffold.** All files from Task 1:
+   - `tsconfig.json` — strict TypeScript with `@shared/*` path alias
+   - `vite.config.ts` — Vite + React + CRXJS with path alias and Vitest config
+   - `src/manifest.json` — MV3 manifest with sidePanel, activeTab, scripting, storage permissions
+   - `src/sidepanel/index.html`, `main.tsx`, `App.tsx` — minimal React sidepanel
+   - `src/background/service-worker.ts` — opens sidepanel on action click
+   - `src/content/index.ts` — PING/PONG message listener
+   - `tests/setup.ts` — jest-dom setup for Vitest
+   - `public/icons/icon{16,48,128}.png` — solid teal placeholder icons (generated via Node.js)
+   - `.gitignore` — excludes node_modules/, dist/, logs, .DS_Store
+
+5. **Added package.json scripts.** dev, build, test, test:watch, lint.
+
+6. **Verified build.** `bun build` succeeds, producing dist/ with correct manifest.json, service worker loader, sidepanel HTML, bundled assets, and icons.
+
+### Decisions and rationale
+
+| Decision | Made by | Rationale |
+|---|---|---|
+| Use @crxjs/vite-plugin 2.3.0 (stable) instead of beta | AI (pragmatic) | Beta.27 unavailable, beta.33 deprecated, stable 2.3.0 works with Vite 8 |
+| Add .gitignore | AI (standard practice) | Prevent node_modules/ and dist/ from being committed |
+| Generate icons via Node.js zlib | AI (tooling constraint) | ImageMagick not available on system |
+
+### What was AI-generated vs. human-authored
+
+- **AI-generated:** All scaffold files (tsconfig.json, vite.config.ts, manifest.json, sidepanel files, service worker, content script, test setup, icons, .gitignore, package.json scripts)
+- **Human-directed:** File contents and structure specified in implementation plan (written in Session 2)
+
+### Artifacts produced
+
+| Artifact | Path | Status |
+|---|---|---|
+| Package configuration | `package.json` | Complete |
+| TypeScript config | `tsconfig.json` | Complete |
+| Vite + CRXJS config | `vite.config.ts` | Complete |
+| MV3 manifest | `src/manifest.json` | Complete |
+| Sidepanel entry | `src/sidepanel/index.html`, `main.tsx`, `App.tsx` | Complete |
+| Service worker | `src/background/service-worker.ts` | Complete |
+| Content script | `src/content/index.ts` | Complete |
+| Test setup | `tests/setup.ts` | Complete |
+| Placeholder icons | `public/icons/icon{16,48,128}.png` | Complete |
+| Git ignore | `.gitignore` | Complete |
+
+### Next steps
+
+- Execute Task 2 (shared types and message definitions)
+- Execute Task 3 (Web Speech API spike)
+- Continue with remaining Chunk 1 tasks
