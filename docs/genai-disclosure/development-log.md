@@ -517,7 +517,54 @@
 
 | Artifact | Path | Status |
 |---|---|---|
-| Canvas scroll fix | `src/content/canvas-overlay.ts` | PR #5 |
-| Message channel cleanup | 3 files (service-worker, content, useCaptureSession) | PR #5 |
-| Updated canvas tests | `tests/content/canvas-overlay.test.ts` | PR #5 |
-- Handle first-click content script injection failure gracefully
+| Canvas scroll fix | `src/content/canvas-overlay.ts` | PR #5, merged |
+| Message channel cleanup | 3 files (service-worker, content, useCaptureSession) | PR #5, merged |
+| Updated canvas tests | `tests/content/canvas-overlay.test.ts` | PR #5, merged |
+
+---
+
+## Session 8 — 2026-03-15: Microphone Permission Flow & First Full Capture
+
+**Model:** Claude Opus 4.6 (Anthropic, via Claude Code CLI)
+**Human lead:** Braeden Bihag
+**AI role:** Researcher, architect, implementer
+
+### What happened
+
+1. **Microphone permission root cause identified.** Research (via Tavily) confirmed that Chrome offscreen documents and sidepanels cannot present the browser's microphone permission prompt. `getUserMedia` in offscreen fails silently with `NotAllowedError: Permission dismissed`. This is a known Chrome limitation, not a code bug.
+
+2. **Three iterations to get mic working:**
+   - **Attempt 1 (PR #6):** Open `mic-permission.html` mid-capture to grant permission, then start offscreen SpeechRecognition. Failed because opening the tab disrupted the active capture session (sidepanel port disconnected).
+   - **Attempt 2:** Check permission before capture, show "Setup Microphone" button in idle state. Failed because `navigator.permissions.query` returns unreliable results in sidepanel context, and the offscreen document still couldn't use mic even after the visible page granted it.
+   - **Attempt 3 (final):** Abandoned offscreen document entirely. Moved SpeechRecognition into `mic-permission.html` itself, which stays open as a background tab during capture. The sidepanel sends `SPEECH_START`/`SPEECH_STOP` messages to it. On first sidepanel open, the tab auto-opens if no stored grant flag exists.
+
+3. **First successful full capture achieved.** Voice transcription, canvas annotations, cursor tracking, and element selection all working together. Capture output includes timestamped voice segments correlated with cursor dwell data and annotations.
+
+### Decisions and rationale
+
+| Decision | Made by | Rationale |
+|---|---|---|
+| Abandon offscreen for speech | AI (after research + 2 failed attempts) | Offscreen getUserMedia is fundamentally unreliable in Chrome extensions |
+| Run SpeechRecognition in visible tab | AI | Research confirmed visible extension pages reliably get mic permission |
+| Auto-open mic tab on sidepanel mount | Braeden | Users shouldn't have to discover a setup button |
+| Keep mic tab open during capture | AI | SpeechRecognition needs a DOM context that persists through the capture |
+| Store grant flag in chrome.storage.local | AI | Prevents re-opening the mic tab on every sidepanel open |
+
+### What was AI-generated vs. human-authored
+
+- **AI-generated:** All three mic permission implementations, research query, mic-permission.html/js rewrite, useSpeechRecognition rewrite, test updates
+- **Human-directed:** "create an explicit on-sidepanel open" (prompted the auto-open approach), "no popup, no change in behavior" (identified stale storage flag issue), decision to keep iterating until mic worked
+- **Human-identified bugs:** mic permission tab not appearing (stale flag), capture disruption when tab opened mid-session
+
+### Artifacts produced
+
+| Artifact | Path | Status |
+|---|---|---|
+| Mic permission + speech page | `public/mic-permission.html`, `public/mic-permission.js` | On main |
+| Rewritten speech hook | `src/sidepanel/hooks/useSpeechRecognition.ts` | On main |
+| Updated speech tests | `tests/sidepanel/hooks/useSpeechRecognition.test.ts` | On main |
+| PR #6 (initial mic flow) | GitHub | Merged |
+
+### First successful capture output
+
+Voice, annotations, and cursor tracking all captured simultaneously on https://almostalab.io/. The user narrated UI feedback ("main hero is far too large", "CTA is overlapping with the subtitle") while drawing a circle annotation and hovering over relevant elements. All data correlated with timestamps.
