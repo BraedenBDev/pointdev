@@ -16,7 +16,11 @@ beforeEach(() => {
           if (idx >= 0) messageListeners.splice(idx, 1)
         }),
       },
-      sendMessage: vi.fn(),
+      sendMessage: vi.fn((msg: any, cb?: any) => {
+        // Simulate MIC_TAB_PING response — tab is alive
+        if (msg.type === 'MIC_TAB_PING' && cb) cb({ alive: true })
+      }),
+      lastError: null,
       getURL: vi.fn((path: string) => `chrome-extension://test/${path}`),
     },
     storage: {
