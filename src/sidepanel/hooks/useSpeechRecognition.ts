@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { VoiceSegment } from '@shared/types'
 
 interface UseSpeechRecognitionReturn {
@@ -18,6 +18,8 @@ const MIC_GRANTED_KEY = 'pointdev_mic_granted'
 
 // Speech recognition runs in mic-permission.html (a visible extension tab)
 // because neither sidepanels nor offscreen documents can reliably get mic access.
+// The tab must stay open during capture. On sidepanel mount, we ensure the tab
+// exists — reopening it silently if the browser was restarted.
 export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   const [isListening, setIsListening] = useState(false)
   const [micPermission, setMicPermission] = useState<'checking' | 'granted' | 'needs-setup'>('checking')
@@ -25,26 +27,41 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   const [interimTranscript, setInterimTranscript] = useState('')
   const [segments, setSegments] = useState<VoiceSegment[]>([])
   const [error, setError] = useState<string | null>(null)
+  const tabReadyRef = useRef(false)
 
-  // Check mic permission on mount and auto-open setup if needed
+  // Ensure mic-permission tab is alive on mount
   useEffect(() => {
-    async function checkMic() {
-      try {
-        const stored = await chrome.storage.local.get(MIC_GRANTED_KEY)
-        if (stored[MIC_GRANTED_KEY]) {
-          setMicPermission('granted')
-          return
-        }
-      } catch {
-        // storage not available in test
+    async function ensureMicTab() {
+      const hasFlag = await chrome.storage.local.get(MIC_GRANTED_KEY)
+        .then(s => !!s[MIC_GRANTED_KEY])
+        .catch(() => false)
+
+      // Ping the mic tab to see if it's alive
+      const tabAlive = await new Promise<boolean>(resolve => {
+        chrome.runtime.sendMessage({ type: 'MIC_TAB_PING' }, response => {
+          // If no tab is listening, Chrome sets lastError
+          if (chrome.runtime.lastError || !response?.alive) {
+            resolve(false)
+          } else {
+            resolve(true)
+          }
+        })
+      })
+
+      if (tabAlive) {
+        // Tab is alive — we're good
+        tabReadyRef.current = true
+        setMicPermission(hasFlag ? 'granted' : 'needs-setup')
+        return
       }
 
-      // Not granted — auto-open the permission page
-      setMicPermission('needs-setup')
+      // Tab is not alive — open it
+      // If permission was previously granted, the tab will auto-detect and hide the button
       window.open(chrome.runtime.getURL('mic-permission.html'))
+      setMicPermission(hasFlag ? 'granted' : 'needs-setup')
     }
 
-    checkMic()
+    ensureMicTab()
   }, [])
 
   // Listen for messages from the mic-permission tab
@@ -68,6 +85,8 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
         setIsListening(false)
       } else if (message.type === 'MIC_PERMISSION_GRANTED') {
         setMicPermission('granted')
+      } else if (message.type === 'MIC_TAB_READY') {
+        tabReadyRef.current = true
       }
     }
 
@@ -86,11 +105,10 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     setError(null)
 
     if (micPermission !== 'granted') {
-      setError('Microphone not enabled. Grant permission first, then try again.')
+      setError('Microphone not enabled. Grant permission in the PointDev tab first.')
       return
     }
 
-    // Send start command to mic-permission.html tab via broadcast
     chrome.runtime.sendMessage({
       type: 'SPEECH_START',
       captureStartedAt,

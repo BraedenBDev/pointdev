@@ -11,6 +11,27 @@ let recognition = null;
 let captureStartedAt = 0;
 let processedResults = 0;
 
+// On load, announce this tab is alive and check if mic is already granted
+(async function init() {
+  try {
+    const permStatus = await navigator.permissions.query({ name: 'microphone' });
+    if (permStatus.state === 'granted') {
+      // Already granted (from a previous session) — skip the button
+      btn.style.display = 'none';
+      status.textContent = 'Microphone ready. Keep this tab open during capture.';
+      status.className = 'status success';
+      chrome.storage.local.set({ pointdev_mic_granted: true });
+      chrome.runtime.sendMessage({ type: 'MIC_TAB_READY' });
+      return;
+    }
+  } catch {
+    // Permissions API not available — show the button
+  }
+
+  // Announce tab is alive but mic needs granting
+  chrome.runtime.sendMessage({ type: 'MIC_TAB_READY' });
+})();
+
 btn.addEventListener('click', async () => {
   btn.disabled = true;
   status.textContent = 'Requesting access...';
@@ -20,10 +41,10 @@ btn.addEventListener('click', async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     stream.getTracks().forEach(track => track.stop());
 
-    status.textContent = 'Microphone access granted. Keep this tab open during capture.';
+    btn.style.display = 'none';
+    status.textContent = 'Microphone ready. Keep this tab open during capture.';
     status.className = 'status success';
 
-    // Persist the grant flag and notify the extension
     chrome.storage.local.set({ pointdev_mic_granted: true });
     chrome.runtime.sendMessage({ type: 'MIC_PERMISSION_GRANTED' });
   } catch (err) {
@@ -43,6 +64,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   } else if (message.type === 'SPEECH_STOP') {
     stopRecognition();
     sendResponse({ ok: true });
+  } else if (message.type === 'MIC_TAB_PING') {
+    sendResponse({ alive: true });
   } else {
     return false;
   }
@@ -106,7 +129,6 @@ function startRecognition() {
   };
 
   recognition.onend = () => {
-    // Auto-restart if still supposed to be listening
     if (recognition) {
       try { recognition.start(); } catch (e) { /* already stopped */ }
     }
@@ -121,6 +143,6 @@ function stopRecognition() {
     recognition = null;
     r.stop();
   }
-  status.textContent = 'Microphone access granted. Keep this tab open during capture.';
+  status.textContent = 'Microphone ready. Keep this tab open during capture.';
   status.className = 'status success';
 }
