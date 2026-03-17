@@ -568,3 +568,52 @@
 ### First successful capture output
 
 Voice, annotations, and cursor tracking all captured simultaneously on https://almostalab.io/. The user narrated UI feedback ("main hero is far too large", "CTA is overlapping with the subtitle") while drawing a circle annotation and hovering over relevant elements. All data correlated with timestamps.
+
+---
+
+## Session 9 — 2026-03-16/17: Mic Tab Lifecycle Fix, Agent Validation, Library Research
+
+**Model:** Claude Opus 4.6 (Anthropic, via Claude Code CLI)
+**Human lead:** Braeden Bihag
+**AI role:** Bug fixer, researcher, code explorer
+
+### What happened
+
+1. **Mic tab lifecycle bug fixed (PR #18, issue #17).** The mic-permission tab (where SpeechRecognition runs) doesn't persist across browser restarts, but the `chrome.storage.local` grant flag does. On sidepanel mount, the hook now pings the mic tab via `MIC_TAB_PING`. If no response, it reopens the tab automatically. The tab also auto-detects existing mic permission on load and hides the grant button.
+
+2. **Real-world agent validation.** Braeden tested PointDev output on a separate Claude session managing the Almost Impossible Agency website. The AI agent parsed PointDev output and provided actionable feedback:
+   - Correctly identified three UI issues from voice + annotations + cursor dwell
+   - Requested: screenshots at annotation timestamps, source file mapping, computed styles on annotations, DOM subtree per annotation
+   - Key quote: "Loom for humans, annotated screenshots + structured metadata for agents. Same capture session, two output formats."
+   - Filed as issues #19, #20, #21
+
+3. **Open source library research.** Investigated three libraries for potential integration:
+   - **rrweb** (session replay): Excellent but blocked for Chrome extensions (base64 Worker inlining violates Chrome Web Store policy, open issue #1699). Future milestone target, not PoC.
+   - **html2canvas** (DOM screenshots): Not useful. Library's own FAQ says don't use in extensions. We already have `captureVisibleTab`.
+   - **pi-annotate** by Nico Bailon (element annotation for Pi agent): Most relevant. Solves similar problem from different angle. Has accessibility capture (ARIA roles), 40+ computed styles, element ancestry cycling. MIT licensed. Cited as prior art.
+
+### Decisions and rationale
+
+| Decision | Made by | Rationale |
+|---|---|---|
+| Ping mic tab on mount instead of trusting storage flag | AI | Storage persists across restarts but tabs don't |
+| Don't integrate rrweb in PoC | AI (research) | Chrome extension CSP blocker, 60MB memory overhead |
+| Skip html2canvas entirely | AI (research) | Library FAQ says don't use in extensions; captureVisibleTab is better |
+| Cite pi-annotate as prior art | AI + Braeden | Complementary tool, MIT licensed, accessibility patterns worth adopting |
+| File agent feedback as issues | Braeden | Real validation from downstream consumer; strengthens roadmap |
+
+### What was AI-generated vs. human-authored
+
+- **AI-generated:** Mic tab lifecycle fix, library exploration and analysis, issue descriptions
+- **Human-directed:** Agent validation test (Braeden ran PointDev output through a separate Claude session), decision to research these specific libraries, bug report (mic not working after restart)
+- **Human-identified:** The agent validation conversation and its implications for the roadmap
+
+### Artifacts produced
+
+| Artifact | Path | Status |
+|---|---|---|
+| Mic tab lifecycle fix | `src/sidepanel/hooks/useSpeechRecognition.ts`, `public/mic-permission.js` | PR #18, merged |
+| Issue: Screenshot at annotation timestamps | GitHub #19 | Open |
+| Issue: Source file path resolution | GitHub #20 | Open |
+| Issue: Computed styles in annotation output | GitHub #21 | Open |
+| Issue: Mic tab lifecycle | GitHub #17 | Closed (PR #18) |
