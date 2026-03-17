@@ -19,13 +19,31 @@ export async function handleMessage(
       console.log('[PointDev] Tab:', fullTab.id, fullTab.url?.slice(0, 60))
 
       // Content script is declaratively injected via manifest content_scripts.
-      // Send PING to verify it's ready.
+      // Send PING to verify it's ready. If not, inject programmatically and retry.
       try {
         await chrome.tabs.sendMessage(tab.id, { type: 'PING' })
         console.log('[PointDev] Content script responded to PING')
-      } catch (e) {
-        console.error('[PointDev] Content script not responding:', e)
-        return { type: 'CAPTURE_ERROR', error: 'Content script not loaded. Try reloading the page.' }
+      } catch {
+        console.log('[PointDev] Content script not present, injecting programmatically')
+        try {
+          const manifest = chrome.runtime.getManifest()
+          const contentScriptFiles = manifest.content_scripts?.[0]?.js ?? []
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: contentScriptFiles,
+          })
+        } catch (injectErr) {
+          console.error('[PointDev] Failed to inject content script:', injectErr)
+          return { type: 'CAPTURE_ERROR', error: 'Cannot capture on this page. Try reloading.' }
+        }
+        // Wait briefly for the script to initialize, then retry PING
+        await new Promise(r => setTimeout(r, 200))
+        try {
+          await chrome.tabs.sendMessage(tab.id, { type: 'PING' })
+          console.log('[PointDev] Content script responded after injection')
+        } catch {
+          return { type: 'CAPTURE_ERROR', error: 'Content script failed to start. Try reloading the page.' }
+        }
       }
 
       // Send INJECT_CAPTURE and get page info from content script response
