@@ -21,6 +21,8 @@ export class CanvasOverlay {
   private drawnAnnotations: StoredAnnotation[] = []
   private scrollRAF: number | null = null
   private boundOnScroll: () => void
+  // Track in-progress preview so scroll redraws can preserve it
+  private currentPreview: { type: 'circle' | 'arrow'; start: Point; current: Point } | null = null
 
   constructor(doc: Document, win: Window) {
     this.doc = doc
@@ -70,17 +72,13 @@ export class CanvasOverlay {
   }
 
   drawCirclePreview(start: Point, current: Point): void {
+    this.currentPreview = { type: 'circle', start, current }
     this.redraw()
-    const cx = start.clientX
-    const cy = start.clientY
-    const rx = Math.abs(current.clientX - start.clientX)
-    const ry = Math.abs(current.clientY - start.clientY)
-    this.drawEllipse(cx, cy, rx, ry)
   }
 
   drawArrowPreview(start: Point, current: Point): void {
+    this.currentPreview = { type: 'arrow', start, current }
     this.redraw()
-    this.drawArrow(start.clientX, start.clientY, current.clientX, current.clientY)
   }
 
   completeAnnotation(
@@ -91,6 +89,7 @@ export class CanvasOverlay {
   ): AnnotationData | null {
     if (this.mode === 'select') return null
 
+    this.currentPreview = null
     const scrollX = this.win.scrollX
     const scrollY = this.win.scrollY
     const timestampMs = now - captureStartedAt
@@ -144,10 +143,19 @@ export class CanvasOverlay {
     const sy = this.win.scrollY
     for (const ann of this.drawnAnnotations) {
       if (ann.type === 'circle') {
-        // Convert page-relative back to viewport-relative for drawing
         this.drawEllipse(ann.cx - sx, ann.cy - sy, ann.rx, ann.ry)
       } else {
         this.drawArrow(ann.sx - sx, ann.sy - sy, ann.ex - sx, ann.ey - sy)
+      }
+    }
+    // Re-render in-progress preview so it survives scroll redraws
+    if (this.currentPreview) {
+      const { type, start, current } = this.currentPreview
+      if (type === 'circle') {
+        this.drawEllipse(start.clientX, start.clientY,
+          Math.abs(current.clientX - start.clientX), Math.abs(current.clientY - start.clientY))
+      } else {
+        this.drawArrow(start.clientX, start.clientY, current.clientX, current.clientY)
       }
     }
   }
