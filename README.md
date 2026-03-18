@@ -1,5 +1,4 @@
 <div align="center">
-
 <img src="docs/images/logo.svg" alt="PointDev logo" width="120" />
 
 # PointDev
@@ -14,7 +13,7 @@ Talk, draw, and click in your browser. PointDev captures the technical context a
 [![Bun](https://img.shields.io/badge/Bun-Runtime-000?style=flat&logo=bun&logoColor=white)](https://bun.sh)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)](CONTRIBUTING.md)
-[![GitHub Issues](https://img.shields.io/github/issues/BraedenBDev/pointdev?style=flat)](https://github.com/BraedenBDev/pointdev/issues)
+[![GitHub Issues](https://img.shields.io/github/issues/braedenbdev/pointdev?style=flat&logo=github)](https://github.com/BraedenBDev/pointdev/issues)
 
 [Getting Started](#quickstart) · [How It Works](#how-it-works) · [Features](#features) · [Roadmap](#roadmap) · [Contributing](CONTRIBUTING.md)
 
