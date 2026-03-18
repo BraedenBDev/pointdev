@@ -1,4 +1,4 @@
-import type { SelectedElementData } from '@shared/types'
+import type { SelectedElementData, BoxModel } from '@shared/types'
 
 export const COMPUTED_STYLE_PROPS = [
   'font-size', 'font-weight', 'font-family',
@@ -45,8 +45,22 @@ export function extractElementData(
   return {
     selector,
     computedStyles: styles,
+    boxModel: getBoxModel(element, computed),
     domSubtree,
     boundingRect: boundingRect as DOMRect,
+  }
+}
+
+export function getBoxModel(element: Element, computed: CSSStyleDeclaration): BoxModel {
+  const px = (prop: string) => parseFloat(computed.getPropertyValue(prop)) || 0
+  return {
+    content: {
+      width: element.clientWidth - px('padding-left') - px('padding-right'),
+      height: element.clientHeight - px('padding-top') - px('padding-bottom'),
+    },
+    padding: { top: px('padding-top'), right: px('padding-right'), bottom: px('padding-bottom'), left: px('padding-left') },
+    border: { top: px('border-top-width'), right: px('border-right-width'), bottom: px('border-bottom-width'), left: px('border-left-width') },
+    margin: { top: px('margin-top'), right: px('margin-right'), bottom: px('margin-bottom'), left: px('margin-left') },
   }
 }
 
