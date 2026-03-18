@@ -1,46 +1,45 @@
+<div align="center">
+
+<img src="docs/images/logo.svg" alt="PointDev logo" width="120" />
+
 # PointDev
 
-Open source structured browser context capture for AI-assisted development.
+**Structured browser context capture for AI coding tools**
 
-PointDev is a Chrome extension that captures what you see in the browser and compiles it into a structured prompt that AI coding agents can act on. Click an element, speak about what you want changed, draw a circle around it. PointDev captures all of that with full technical context.
+Talk, draw, and click in your browser. PointDev captures the technical context and your intent, then compiles it into a structured prompt any AI agent can act on.
 
-## The Problem
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat&logo=typescript&logoColor=white)](https://typescriptlang.org)
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react&logoColor=black)](https://react.dev)
+[![Chrome MV3](https://img.shields.io/badge/Chrome-MV3-4285F4?style=flat&logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/mv3/)
+[![Bun](https://img.shields.io/badge/Bun-Runtime-000?style=flat&logo=bun&logoColor=white)](https://bun.sh)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)](CONTRIBUTING.md)
+[![GitHub Issues](https://img.shields.io/github/issues/BraedenBDev/pointdev?style=flat)](https://github.com/BraedenBDev/pointdev/issues)
 
-You spot a bug in your browser. You switch to Claude Code and type "the font on the hero section is too small." Your AI agent has to guess which file, which component, what the current font size is, and what "too small" means.
+[Getting Started](#quickstart) · [How It Works](#how-it-works) · [Features](#features) · [Roadmap](#roadmap) · [Contributing](CONTRIBUTING.md)
 
-The DOM path, component name, computed styles, and your spatial intent are all lost. Every AI coding tool suffers from this input problem.
+</div>
 
-Browser automation tools (Playwright, Puppeteer, Claude's computer use) solve the inverse: they give AI agents the ability to see and navigate pages programmatically. But an agent that can read every DOM node on your page still doesn't know that *you* think the hero font is too small, that *you* were pointing at the H1 when you said it, or that *you* circled it for emphasis. Intent is not on the page. Intent is in the human's head, and it needs a way out that carries technical precision with it.
+---
 
-## What PointDev Does
+## What is PointDev?
 
-PointDev captures technical context and human context at the same time.
+You spot a problem in your browser. You switch to Claude Code and type "the hero font is too small." The agent has to guess which file, which component, what the current size is, and what "too small" means. The DOM path, component name, computed styles, and your spatial intent are all lost.
 
-**Technical context (captured automatically):**
+Browser automation gives AI agents eyes. PointDev gives humans a voice.
 
-| What | How |
-|------|-----|
-| CSS selector + DOM subtree | Click any element |
-| Computed styles | font-size, color, spacing, etc. |
-| React component name | Detected via fiber internals when available |
-| Page metadata | URL, title, viewport dimensions |
-| Device metadata | Browser, OS, screen size, pixel ratio |
-| Cursor dwell behavior | Tracks what you point at while talking |
-| Element screenshot | Captured on element selection |
+PointDev captures technical context (element selector, DOM subtree, computed styles, React component name, device metadata) and human context (timestamped voice narration, canvas annotations, cursor dwell behavior) simultaneously, then compiles everything into structured output any downstream tool can consume.
 
-**Human context (your input):**
+**Key highlights:**
 
-| What | How |
-|------|-----|
-| Voice narration | Speak naturally about what you want changed |
-| Visual annotations | Draw circles and arrows on the page |
-| Element selection | Click the specific element you mean |
-
-Everything compiles into a single structured prompt with timestamps that correlate your words with your annotations. Copy it, paste it into any AI coding tool, and the agent knows exactly what to do.
+- **Talk, draw, click** all at the same time during a single capture session
+- **Temporal correlation** links what you're pointing at with what you're saying
+- **Works on any web page**, with opportunistic React component detection
+- **Copy and paste** the structured output into any AI coding tool
 
 ### Real Output
 
-This is actual output from PointDev running on https://almostalab.io/:
+This is actual output from PointDev, captured on a live site:
 
 ```
 ## Context
@@ -55,67 +54,140 @@ This is actual output from PointDev running on https://almostalab.io/:
 [00:09] "is far too"
 [00:11] "large"
 [00:15] "and we need to adjust the line breaking"
-[00:16] "to be"
 [00:19] "two or three lines at Max"
 [00:23] "and there is a problem at the bottom here"
 [00:26] "where you scroll CTA"
-[00:28] "is"
 [00:32] "overlapping with the"
 [00:35] "subtitle of the page"
-[00:39] "here I'll select it"
 
 ## Annotations
 1. [00:40] Circle around .lg\:min-h-\[100svh\] at (42, 1019), radius 131px
 
 ## Cursor Behavior
 - [00:07-00:32] Dwelled 25.5s over h1.font-display.text-hero (during: "main hero")
-- [00:21-00:29] Dwelled 7.2s over span.font-mono.text-[10px] (during: "and there is a problem at the bottom here")
-- [00:25-00:32] Dwelled 7.3s over div.absolute.bottom-10 (during: "where you scroll CTA")
-- [00:28-00:34] Dwelled 5.6s over p.hidden.lg:block (during: "is")
+- [00:25-00:32] Dwelled 7.3s over div.absolute.bottom-10 (during: "scroll CTA")
 - [00:29-00:36] Dwelled 6.2s over div.absolute.bottom-10 (during: "overlapping with the")
 ```
 
-An AI agent reading this output knows: the user wants the hero text smaller (two or three lines max), and there's an overlap between the scroll CTA (`div.absolute.bottom-10`) and the subtitle (`p.hidden.lg:block`). The cursor dwell data confirms which elements the user was looking at while speaking. No guesswork.
+An AI agent reading this knows which elements the user means, what they want changed, and where they were looking while saying it. No guesswork.
 
-## Installation
+---
+
+## Quickstart
 
 > **Status: Proof of Concept.** Working demo, not a production release.
+>
+> Requires [Bun](https://bun.sh) and Chrome.
 
-1. Clone this repository
-2. `bun install && bun build`
-3. Open `chrome://extensions/`, enable Developer Mode
-4. Click "Load unpacked" and select the `dist/` folder
-5. Open any web page, click the PointDev icon to open the sidepanel
-6. On first open, a tab will ask for microphone permission (one-time setup for voice)
+```bash
+git clone https://github.com/BraedenBDev/pointdev.git
+cd pointdev
+bun install
+bun build
+```
 
-## Usage
+1. Open `chrome://extensions/`, enable **Developer Mode**
+2. Click **Load unpacked** and select the `dist/` folder
+3. Open any web page, click the PointDev icon to open the sidepanel
+4. On first open, a tab will ask for microphone permission (one-time setup)
 
-1. Click **Start Capture** in the sidepanel
-2. Talk, draw, and click simultaneously:
-   - **Click** any element to capture its DOM context
-   - **Toggle to Circle or Arrow** mode to annotate the page
-   - **Speak** to narrate what you want (transcription runs live)
-3. Click **Stop Capture**
-4. Review the compiled prompt in the sidepanel
-5. Click **Copy to Clipboard** and paste into your AI coding tool
+---
 
 ## How It Works
 
-PointDev is a Chrome Manifest V3 extension with three cooperating contexts:
+```mermaid
+flowchart LR
+    subgraph Browser Tab
+        CS[Content Script]
+    end
+    subgraph Extension
+        SP[Sidepanel<br/>React UI]
+        SW[Service Worker<br/>State Coordinator]
+        MT[Mic Tab<br/>Web Speech API]
+    end
 
-**Sidepanel (React):** Capture controls, live feedback, compiled output display. Coordinates voice transcription with the mic-permission tab.
+    SP -- START_CAPTURE --> SW
+    SW -- INJECT_CAPTURE --> CS
+    CS -- element, annotation,<br/>cursor data --> SW
+    SW -- SESSION_UPDATED --> SP
+    MT -- SPEECH_RESULT --> SP
+    SP -- TRANSCRIPT_UPDATE --> SW
+```
 
-**Service Worker:** Coordinates state between sidepanel and content script. Holds the capture session, routes messages, captures element screenshots.
+**Sidepanel (React):** Capture controls, live feedback, compiled output display, copy-to-clipboard.
 
-**Content Script:** Injected into the active page for element selection, canvas annotation overlay (position: fixed, redraws on scroll), cursor tracking, and React component detection.
+**Service Worker:** Coordinates state between sidepanel and content script. Holds the `CaptureSession`, routes messages, captures element screenshots.
 
-**Mic-Permission Tab:** Runs Web Speech API in a visible extension page. Chrome sidepanels and offscreen documents cannot get microphone access, so speech recognition runs here and sends results back to the sidepanel via messaging.
+**Content Script:** Injected into the active page. Handles element selection, canvas annotation overlay (position: fixed, redraws on scroll), cursor tracking, and React component detection.
+
+**Mic-Permission Tab:** Runs Web Speech API in a visible extension page. Chrome sidepanels and offscreen documents cannot get microphone access, so speech recognition runs here and sends results back via messaging.
 
 All capture data flows into a single `CaptureSession` object with timestamps relative to recording start. A template formatter compiles this into the structured output.
 
-### React Component Detection
+---
 
-When you click an element on a React page, PointDev inspects React fiber internals (`__reactFiber$`) to resolve the component name and source file. Works on development builds and most production builds. If React isn't detected, it falls back to CSS selector + DOM subtree. The extension works on any web page.
+## Features
+
+**Technical context (captured automatically):**
+
+| Feature | Description |
+|---------|-------------|
+| CSS selector + DOM subtree | Click any element to capture its selector and surrounding HTML |
+| Computed styles | font-size, color, spacing, display, position, and more |
+| React component detection | Resolves component name via `__reactFiber$` internals |
+| Page metadata | URL, title, viewport dimensions |
+| Device metadata | Browser, OS, screen size, pixel ratio, touch, color scheme |
+| Cursor dwell tracking | Records which elements you hover over and for how long |
+| Element screenshot | Captured via `captureVisibleTab` on element selection |
+
+**Human context (your input):**
+
+| Feature | Description |
+|---------|-------------|
+| Voice narration | Speak naturally; transcription runs live with timestamps |
+| Visual annotations | Draw circles and arrows directly on the page |
+| Element selection | Click the specific element you mean |
+
+**Everything is temporally correlated.** The cursor dwell data shows which element you were pointing at when you said each phrase. Annotations are timestamped to align with your voice.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Extension | Chrome Manifest V3 |
+| UI | React 18, TypeScript |
+| Build | Vite + CRXJS |
+| Runtime | Bun |
+| Canvas | HTML5 Canvas API (annotation overlay) |
+| Voice | Web Speech API |
+| Testing | Vitest (84 tests) |
+
+---
+
+## Project Structure
+
+```
+pointdev/
+├── src/
+│   ├── background/         # Service worker, message handler, session store
+│   ├── content/            # Element selector, canvas overlay, cursor tracker,
+│   │                       # React inspector, device metadata
+│   ├── shared/             # Types, message definitions, template formatter,
+│   │                       # dwell computation
+│   └── sidepanel/          # React UI: App, hooks, components
+├── public/                 # Offscreen doc, mic-permission page, icons
+├── tests/                  # Vitest unit tests (mirrors src/ structure)
+├── docs/
+│   ├── design/             # MVP spec, implementation plan, library research
+│   └── genai-disclosure/   # AI-assisted development log
+├── CLAUDE.md               # AI agent guidance for this codebase
+├── CONTRIBUTING.md         # Dev setup, testing, commit conventions
+└── README.md
+```
+
+---
 
 ## Permissions
 
@@ -131,23 +203,42 @@ PointDev requests minimal Chrome permissions:
 
 No background access to your browsing. No data leaves your machine except Web Speech API audio, which Chrome sends to Google for transcription.
 
-## Current Limitations
+---
 
-This is a proof of concept. Here's what we want to address next:
+## Roadmap
 
-**Transcription privacy.** Web Speech API sends audio to Google. A local option (Whisper, on-device models) would keep everything on-machine.
+- [x] Element selection with CSS selector, computed styles, DOM subtree
+- [x] React component detection via fiber internals
+- [x] Canvas annotation overlay (circle, arrow) with scroll anchoring
+- [x] Voice transcription with timestamped segments
+- [x] Cursor dwell tracking with temporal correlation
+- [x] Device metadata capture
+- [x] Element-scoped screenshots
+- [x] Compiled structured output with copy-to-clipboard
+- [ ] Screenshot at each annotation timestamp ([#19](https://github.com/BraedenBDev/pointdev/issues/19))
+- [ ] Source file path resolution from selectors ([#20](https://github.com/BraedenBDev/pointdev/issues/20))
+- [ ] Computed styles + DOM subtree on annotations ([#21](https://github.com/BraedenBDev/pointdev/issues/21))
+- [ ] Box model extraction ([#24](https://github.com/BraedenBDev/pointdev/issues/24))
+- [ ] Accessibility capture (ARIA roles, names) ([#23](https://github.com/BraedenBDev/pointdev/issues/23))
+- [ ] Multi-element selection ([#13](https://github.com/BraedenBDev/pointdev/issues/13))
+- [ ] Freehand, rectangle, text annotation tools ([#8](https://github.com/BraedenBDev/pointdev/issues/8))
+- [ ] Local speech-to-text via Whisper ([#7](https://github.com/BraedenBDev/pointdev/issues/7))
+- [ ] Pluggable output formats: JSON, Markdown, MCP ([#10](https://github.com/BraedenBDev/pointdev/issues/10))
+- [ ] Vue and Svelte component detection ([#9](https://github.com/BraedenBDev/pointdev/issues/9))
+- [ ] Console and network error capture ([#11](https://github.com/BraedenBDev/pointdev/issues/11))
+- [ ] Direct delivery to AI tools via bridge server ([#12](https://github.com/BraedenBDev/pointdev/issues/12))
 
-**Annotation tools.** Currently circle and arrow only. Freehand, rectangles, and text labels would cover more use cases.
+See all [open issues](https://github.com/BraedenBDev/pointdev/issues) for the full backlog.
 
-**Framework coverage.** React detection only. Vue and Svelte expose similar internals and could be supported with framework-specific adapters.
+---
 
-**Structured output formats.** Output is plain text. A pluggable compiler with JSON, Markdown, and MCP-compatible adapters would enable programmatic consumption.
+## Contributing
 
-**Console and network context.** Console errors and failed network requests are high-value debugging context. Requires `chrome.debugger` API with elevated permissions.
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, testing, coding standards, and commit conventions.
 
-**Direct tool integration.** Output goes via clipboard. A local bridge server could deliver context directly to Claude Code, Aider, and other tools.
+Look for issues labeled [**good first issue**](https://github.com/BraedenBDev/pointdev/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) and [**help wanted**](https://github.com/BraedenBDev/pointdev/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22).
 
-**Multi-element selection.** Currently captures one element per session. Multiple selections would support feedback like "these three buttons are inconsistent."
+---
 
 ## AI-Assisted Development Disclosure
 
@@ -157,10 +248,18 @@ Commits from AI agents use `Co-Authored-By` tags so they are distinguishable fro
 
 This is directly relevant to PointDev's mission: we're building a tool that improves the input side of human-to-AI-coder communication, and we're building it with those same tools.
 
-## Tech Stack
+Full development log: [`docs/genai-disclosure/development-log.md`](docs/genai-disclosure/development-log.md)
 
-Chrome MV3 / React 18 / TypeScript / HTML5 Canvas API / Web Speech API / Vite / bun
+---
 
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+---
+
+<div align="center">
+
+**[github.com/BraedenBDev/pointdev](https://github.com/BraedenBDev/pointdev)** · Built by [Braeden Bihag](https://almostalab.io) at [Almost a Lab](https://almostalab.io)
+
+</div>

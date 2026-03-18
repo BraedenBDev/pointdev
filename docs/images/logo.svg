@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Selection box with dashed border -->
+  <rect x="40" y="50" width="120" height="100" rx="4" ry="4"
+        fill="none" stroke="#2563eb" stroke-width="2.5"
+        stroke-dasharray="8 4" opacity="0.8"/>
+
+  <!-- Corner handles -->
+  <rect x="34" y="44" width="12" height="12" rx="2" fill="#2563eb"/>
+  <rect x="154" y="44" width="12" height="12" rx="2" fill="#2563eb"/>
+  <rect x="34" y="144" width="12" height="12" rx="2" fill="#2563eb"/>
+  <rect x="154" y="144" width="12" height="12" rx="2" fill="#2563eb"/>
+
+  <!-- Pencil angled from bottom-right -->
+  <g transform="translate(145, 135) rotate(-45)">
+    <!-- Pencil body -->
+    <rect x="0" y="-5" width="55" height="10" rx="1" fill="#1a1a1a"/>
+    <!-- Pencil tip -->
+    <polygon points="0,-5 0,5 -10,0" fill="#f59e0b"/>
+    <!-- Pencil eraser band -->
+    <rect x="48" y="-5" width="4" height="10" fill="#6b7280"/>
+    <rect x="52" y="-5" width="8" height="10" rx="1" fill="#ef4444"/>
+  </g>
+
+  <!-- Annotation circle mark on the selection -->
+  <circle cx="80" cy="90" r="18" fill="none" stroke="#ef4444" stroke-width="2.5" opacity="0.9"/>
+
+  <!-- Small dot where pencil tip meets the selection -->
+  <circle cx="80" cy="90" r="2.5" fill="#ef4444"/>
+</svg>
