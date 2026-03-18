@@ -69,7 +69,21 @@ This is actual output from PointDev, captured on a live site:
 - [00:29-00:36] Dwelled 6.2s over div.absolute.bottom-10 (during: "overlapping with the")
 ```
 
-An AI agent reading this knows which elements the user means, what they want changed, and where they were looking while saying it. No guesswork.
+### What an AI Agent Does With This
+
+We pasted PointDev output into a Claude Code session managing a live website. Without any prior context, the agent:
+
+1. **Identified three UI issues** from the voice transcript, annotations, and cursor dwell data
+2. **Mapped each issue to specific elements** (the `h1.font-display`, `div.absolute.bottom-10` overlap, padding mismatch)
+3. **Offered to fix all three immediately**, asking only "Want me to look at the Hero component and fix these alignment/spacing issues?"
+
+The agent also described what would make the output even more actionable:
+
+> "The ideal output for an agent is: screenshot + voice intent + source file:line + computed styles on each annotation target. That's a one-shot fix with no exploration needed."
+
+> "Loom for humans, annotated screenshots + structured metadata for agents. Same capture session, two output formats."
+
+That feedback is now driving our [roadmap](#roadmap).
 
 ---
 
