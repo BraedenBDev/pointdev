@@ -1,4 +1,4 @@
-import type { CaptureSession, CircleCoords, ArrowCoords } from './types'
+import type { CaptureSession, CircleCoords, ArrowCoords, BoxModel } from './types'
 
 export function formatSession(session: CaptureSession): string {
   const sections: string[] = []
@@ -74,6 +74,10 @@ function formatTargetElement(session: CaptureSession): string {
     lines.push(`- Computed: ${computedStr}`)
   }
 
+  if (el.boxModel) {
+    lines.push(`- Box Model: ${formatBoxModel(el.boxModel)}`)
+  }
+
   lines.push(`- DOM: ${truncateDom(el.domSubtree)}`)
 
   return lines.join('\n')
@@ -111,6 +115,15 @@ function reconstructShorthand(styles: Record<string, string>, prop: string): str
   return `${prop}: ${top} ${right} ${bottom} ${left}`
 }
 
+function formatBoxModel(box: BoxModel): string {
+  const fmt = (sides: { top: number; right: number; bottom: number; left: number }) => {
+    const { top, right, bottom, left } = sides
+    if (top === right && right === bottom && bottom === left) return `${top}px`
+    return `${top} ${right} ${bottom} ${left}px`
+  }
+  return `${box.content.width}x${box.content.height} (padding: ${fmt(box.padding)}, border: ${fmt(box.border)}, margin: ${fmt(box.margin)})`
+}
+
 function truncateDom(html: string): string {
   if (html.length <= 500) return html
   return html.slice(0, 500) + '<!-- truncated -->'
@@ -137,6 +150,14 @@ function formatAnnotations(session: CaptureSession): string {
     } else {
       const a = ann.coordinates as ArrowCoords
       lines.push(`${i + 1}. [${ts}] Arrow from (${a.startX}, ${a.startY}) to (${a.endX}, ${a.endY}), pointing at ${target}`)
+    }
+
+    if (ann.nearestElementContext) {
+      const ctx = ann.nearestElementContext
+      const styles = formatComputedStyles(ctx.computedStyles)
+      if (styles) lines.push(`   Computed: ${styles}`)
+      if (ctx.boxModel) lines.push(`   Box Model: ${formatBoxModel(ctx.boxModel)}`)
+      lines.push(`   DOM: ${truncateDom(ctx.domSubtree)}`)
     }
   }
   return lines.join('\n')

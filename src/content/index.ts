@@ -106,6 +106,17 @@ function handleMouseUp(e: MouseEvent) {
     const nearestEl = findNearestElement(viewportX, viewportY, document)
     if (nearestEl && generateSelector) {
       annotation.nearestElement = generateSelector(nearestEl)
+      const elData = extractElementData(
+        nearestEl,
+        annotation.nearestElement,
+        window.getComputedStyle.bind(window),
+        { scrollX: window.scrollX, scrollY: window.scrollY }
+      )
+      annotation.nearestElementContext = {
+        computedStyles: elData.computedStyles,
+        boxModel: elData.boxModel,
+        domSubtree: elData.domSubtree,
+      }
     }
 
     chrome.runtime.sendMessage({ type: 'ANNOTATION_ADDED', data: annotation })

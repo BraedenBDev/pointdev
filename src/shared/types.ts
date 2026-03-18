@@ -38,9 +38,17 @@ export interface ElementScreenshot {
   height: number
 }
 
+export interface BoxModel {
+  content: { width: number; height: number }
+  padding: { top: number; right: number; bottom: number; left: number }
+  border: { top: number; right: number; bottom: number; left: number }
+  margin: { top: number; right: number; bottom: number; left: number }
+}
+
 export interface SelectedElementData {
   selector: string
   computedStyles: Record<string, string>
+  boxModel?: BoxModel
   domSubtree: string
   boundingRect: DOMRect
   reactComponent?: {
@@ -66,6 +74,11 @@ export interface AnnotationData {
   coordinates: CircleCoords | ArrowCoords
   timestampMs: number
   nearestElement?: string
+  nearestElementContext?: {
+    computedStyles: Record<string, string>
+    boxModel?: BoxModel
+    domSubtree: string
+  }
 }
 
 export interface CircleCoords {
