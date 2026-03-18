@@ -71,7 +71,7 @@ This is actual output from PointDev, captured on a live site:
 
 ### What an AI Agent Does With This
 
-We pasted PointDev output into a Claude Code session managing a live website. Without any prior context, the agent:
+We pasted PointDev output into a Claude Code session managing the live website. Without any prior context, the agent:
 
 1. **Identified three UI issues** from the voice transcript, annotations, and cursor dwell data
 2. **Mapped each issue to specific elements** (the `h1.font-display`, `div.absolute.bottom-10` overlap, padding mismatch)
