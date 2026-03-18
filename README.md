@@ -1,6 +1,5 @@
 <div align="center">
 <img src="docs/images/logo.svg" alt="PointDev logo" width="120" />
-
 # PointDev
 
 **Structured browser context capture for AI coding tools**
