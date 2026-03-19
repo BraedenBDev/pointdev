@@ -48,6 +48,20 @@ export function CaptureControls({ isCapturing, onStart, onStop, onModeChange }: 
         >
           &#8594;
         </button>
+        <button
+          className={`mode-btn ${mode === 'freehand' ? 'active' : ''}`}
+          onClick={() => handleModeChange('freehand')}
+          title="Freehand draw"
+        >
+          &#9998;
+        </button>
+        <button
+          className={`mode-btn ${mode === 'rectangle' ? 'active' : ''}`}
+          onClick={() => handleModeChange('rectangle')}
+          title="Draw rectangle"
+        >
+          &#9633;
+        </button>
       </div>
       <button className="btn-stop" onClick={onStop}>
         Stop Capture

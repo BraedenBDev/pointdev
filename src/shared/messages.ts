@@ -29,4 +29,4 @@ export type Message =
   | { type: 'CAPTURE_COMPLETE'; session: CaptureSession }
   | { type: 'CAPTURE_ERROR'; error: string }
 
-export type CaptureMode = 'select' | 'circle' | 'arrow'
+export type CaptureMode = 'select' | 'circle' | 'arrow' | 'freehand' | 'rectangle'

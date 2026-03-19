@@ -4,6 +4,7 @@ import { extractElementData, findNearestElement } from './element-selector'
 import { inspectReactComponent } from './react-inspector'
 import { collectDeviceMetadata } from './device-metadata'
 import type { CaptureMode } from '@shared/messages'
+import type { AnnotationData } from '@shared/types'
 
 // Use dynamic import of css-selector-generator to keep it tree-shakeable
 let generateSelector: ((el: Element) => string) | null = null
@@ -29,6 +30,7 @@ let currentMode: CaptureMode = 'select'
 
 // Drawing state
 let drawStart: { clientX: number; clientY: number } | null = null
+let freehandPoints: Array<{ clientX: number; clientY: number }> = []
 
 function handleClick(e: MouseEvent) {
   if (!isCapturing || currentMode !== 'select') return
@@ -70,6 +72,9 @@ function handleClick(e: MouseEvent) {
 function handleMouseDown(e: MouseEvent) {
   if (!isCapturing || currentMode === 'select' || !overlay) return
   drawStart = { clientX: e.clientX, clientY: e.clientY }
+  if (currentMode === 'freehand') {
+    freehandPoints = [{ clientX: e.clientX, clientY: e.clientY }]
+  }
 }
 
 function handleMouseMove(e: MouseEvent) {
@@ -78,30 +83,58 @@ function handleMouseMove(e: MouseEvent) {
     overlay.drawCirclePreview(drawStart, { clientX: e.clientX, clientY: e.clientY })
   } else if (currentMode === 'arrow') {
     overlay.drawArrowPreview(drawStart, { clientX: e.clientX, clientY: e.clientY })
+  } else if (currentMode === 'freehand') {
+    // Throttle: skip points within 3px of the last one to avoid excessive accumulation
+    const last = freehandPoints[freehandPoints.length - 1]
+    if (!last || Math.abs(e.clientX - last.clientX) > 3 || Math.abs(e.clientY - last.clientY) > 3) {
+      freehandPoints.push({ clientX: e.clientX, clientY: e.clientY })
+    }
+    overlay.drawFreehandPreview(freehandPoints)
+  } else if (currentMode === 'rectangle') {
+    overlay.drawRectanglePreview(drawStart, { clientX: e.clientX, clientY: e.clientY })
   }
 }
 
 function handleMouseUp(e: MouseEvent) {
   if (!drawStart || !overlay) return
 
-  const annotation = overlay.completeAnnotation(
-    drawStart,
-    { clientX: e.clientX, clientY: e.clientY },
-    captureStartedAt,
-    Date.now()
-  )
+  let annotation: AnnotationData | null = null
+
+  if (currentMode === 'freehand') {
+    annotation = overlay.completeFreehandAnnotation(freehandPoints, captureStartedAt, Date.now())
+    freehandPoints = []
+  } else {
+    annotation = overlay.completeAnnotation(
+      drawStart, { clientX: e.clientX, clientY: e.clientY },
+      captureStartedAt, Date.now()
+    )
+  }
 
   drawStart = null
 
   if (annotation) {
-    // Resolve nearest element at the annotation's focal point
-    const coords = annotation.coordinates as Record<string, number>
-    const viewportX = annotation.type === 'circle'
-      ? coords.centerX - window.scrollX
-      : coords.endX - window.scrollX
-    const viewportY = annotation.type === 'circle'
-      ? coords.centerY - window.scrollY
-      : coords.endY - window.scrollY
+    // Resolve focal point for nearestElement
+    let viewportX: number, viewportY: number
+    const coords = annotation.coordinates as any
+
+    if (annotation.type === 'circle') {
+      viewportX = coords.centerX - window.scrollX
+      viewportY = coords.centerY - window.scrollY
+    } else if (annotation.type === 'arrow') {
+      viewportX = coords.endX - window.scrollX
+      viewportY = coords.endY - window.scrollY
+    } else if (annotation.type === 'freehand') {
+      // Centroid of all points
+      const pts = coords.points as Array<{ x: number; y: number }>
+      const cx = pts.reduce((s: number, p: { x: number }) => s + p.x, 0) / pts.length
+      const cy = pts.reduce((s: number, p: { y: number }) => s + p.y, 0) / pts.length
+      viewportX = cx - window.scrollX
+      viewportY = cy - window.scrollY
+    } else {
+      // Rectangle center
+      viewportX = coords.x + coords.width / 2 - window.scrollX
+      viewportY = coords.y + coords.height / 2 - window.scrollY
+    }
 
     const nearestEl = findNearestElement(viewportX, viewportY, document)
     if (nearestEl && generateSelector) {

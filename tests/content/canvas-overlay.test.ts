@@ -15,6 +15,7 @@ function createMockCanvas() {
     restore: vi.fn(),
     translate: vi.fn(),
     rotate: vi.fn(),
+    strokeRect: vi.fn(),
     set strokeStyle(v: string) {},
     set fillStyle(v: string) {},
     set lineWidth(v: number) {},
@@ -156,5 +157,83 @@ describe('CanvasOverlay', () => {
 
     overlay.destroy()
     expect(mockWin.removeEventListener).toHaveBeenCalledWith('scroll', expect.any(Function))
+  })
+
+  it('records rectangle annotation on draw complete', () => {
+    const canvas = createMockCanvas()
+    const mockDoc = {
+      createElement: vi.fn(() => canvas),
+      body: { appendChild: vi.fn() },
+    }
+    const overlay = new CanvasOverlay(mockDoc as any, createMockWindow())
+    overlay.setMode('rectangle')
+
+    const annotation = overlay.completeAnnotation(
+      { clientX: 100, clientY: 200 },
+      { clientX: 250, clientY: 350 },
+      1000, 2000
+    )
+
+    expect(annotation).toBeTruthy()
+    expect(annotation!.type).toBe('rectangle')
+    const coords = annotation!.coordinates as any
+    expect(coords.width).toBe(150)
+    expect(coords.height).toBe(150)
+  })
+
+  it('rejects rectangle smaller than 10px', () => {
+    const canvas = createMockCanvas()
+    const mockDoc = {
+      createElement: vi.fn(() => canvas),
+      body: { appendChild: vi.fn() },
+    }
+    const overlay = new CanvasOverlay(mockDoc as any, createMockWindow())
+    overlay.setMode('rectangle')
+
+    const annotation = overlay.completeAnnotation(
+      { clientX: 100, clientY: 200 },
+      { clientX: 105, clientY: 205 },
+      1000, 2000
+    )
+    expect(annotation).toBeNull()
+  })
+
+  it('records freehand annotation', () => {
+    const canvas = createMockCanvas()
+    const mockDoc = {
+      createElement: vi.fn(() => canvas),
+      body: { appendChild: vi.fn() },
+    }
+    const overlay = new CanvasOverlay(mockDoc as any, createMockWindow())
+    overlay.setMode('freehand')
+
+    const points = [
+      { clientX: 100, clientY: 200 },
+      { clientX: 110, clientY: 210 },
+      { clientX: 120, clientY: 220 },
+      { clientX: 130, clientY: 230 },
+    ]
+    const annotation = overlay.completeFreehandAnnotation(points, 1000, 2000)
+
+    expect(annotation).toBeTruthy()
+    expect(annotation!.type).toBe('freehand')
+    const coords = annotation!.coordinates as any
+    expect(coords.points).toHaveLength(4)
+  })
+
+  it('rejects freehand with fewer than 3 points', () => {
+    const canvas = createMockCanvas()
+    const mockDoc = {
+      createElement: vi.fn(() => canvas),
+      body: { appendChild: vi.fn() },
+    }
+    const overlay = new CanvasOverlay(mockDoc as any, createMockWindow())
+    overlay.setMode('freehand')
+
+    const annotation = overlay.completeFreehandAnnotation(
+      [{ clientX: 100, clientY: 200 }, { clientX: 110, clientY: 210 }],
+      1000, 2000
+    )
+    expect(annotation).toBeNull()
   })
 })
