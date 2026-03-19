@@ -89,6 +89,18 @@ export function discoverCssVariables(element: Element, doc: Document): Record<st
   return vars
 }
 
+export function getAncestryChain(element: Element, maxDepth = 10): Element[] {
+  const chain: Element[] = [element]
+  let current = element.parentElement
+  while (current && current.tagName !== 'BODY' && current.tagName !== 'HTML' && chain.length < maxDepth) {
+    if (!current.hasAttribute('data-pointdev')) {
+      chain.push(current)
+    }
+    current = current.parentElement
+  }
+  return chain
+}
+
 export function findNearestElement(
   viewportX: number,
   viewportY: number,
