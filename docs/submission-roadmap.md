@@ -101,21 +101,42 @@
 
 ---
 
-## Friday March 20 — Submit
+## March 20-24 — Polish Window
 
-### Application (30 min, morning)
-- [ ] Fresh eyes. One final read of everything in the form
-- [ ] Verify all links work (GitHub repo, GenAI log, design spec)
-- [ ] Verify attachments are uploaded
-- [ ] Hit submit
-- [ ] Don't tinker after submitting
+**Timeline revised:** Submission now targets AFTER the NLnet open office hours on March 25.
 
 ### Repo
-- [ ] Nothing. The last commit should be Thursday.
+- [ ] Fix auto-screenshot bug (thumbnails not appearing — debug logging active)
+- [ ] Tag `v0.1.0` release
+- [ ] Update GenAI development log (Sessions 9-10)
+- [ ] Continue fixing open issues if time allows
+
+### Application
+- [ ] Refine application based on any insights from additional testing
+- [ ] Export Claude conversations as PDFs for GenAI disclosure
 
 ---
 
-## Buffer: March 21-31
+## Tuesday March 25 — NLnet Open Office Hours
+
+- [ ] Attend open office session
+- [ ] Ask questions about the application process, scoring, and format
+- [ ] Note any feedback on framing or approach
+- [ ] Revise application based on feedback
+
+---
+
+## March 26-31 — Submit
+
+- [ ] Final read of everything in the form
+- [ ] Verify all links work (GitHub repo, GenAI log, design spec)
+- [ ] Verify attachments uploaded
+- [ ] Submit before April 1 deadline
+- [ ] Don't tinker after submitting
+
+---
+
+## Buffer: April 1 Deadline
 
 If something goes wrong or you want to revise:
 - NLnet takes the last complete version submitted before April 1
