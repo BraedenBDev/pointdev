@@ -64,6 +64,31 @@ export function getBoxModel(element: Element, computed: CSSStyleDeclaration): Bo
   }
 }
 
+export function discoverCssVariables(element: Element, doc: Document): Record<string, string> {
+  const vars: Record<string, string> = {}
+  let count = 0
+  for (const sheet of Array.from(doc.styleSheets)) {
+    try {
+      for (const rule of Array.from(sheet.cssRules)) {
+        // Duck-type check instead of instanceof — more robust across frames
+        if (!('selectorText' in rule) || !('style' in rule)) continue
+        const styleRule = rule as CSSStyleRule
+        try {
+          if (!element.matches(styleRule.selectorText)) continue
+        } catch { continue }
+        for (let i = 0; i < styleRule.style.length; i++) {
+          const prop = styleRule.style[i]
+          if (prop.startsWith('--') && count < 50) {
+            vars[prop] = styleRule.style.getPropertyValue(prop)
+            count++
+          }
+        }
+      }
+    } catch { /* cross-origin sheets throw SecurityError */ }
+  }
+  return vars
+}
+
 export function findNearestElement(
   viewportX: number,
   viewportY: number,

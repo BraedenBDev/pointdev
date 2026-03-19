@@ -1,6 +1,6 @@
 import { CanvasOverlay } from './canvas-overlay'
 import { CursorTracker } from './cursor-tracker'
-import { extractElementData, findNearestElement } from './element-selector'
+import { extractElementData, findNearestElement, discoverCssVariables } from './element-selector'
 import { inspectReactComponent } from './react-inspector'
 import { collectDeviceMetadata } from './device-metadata'
 import type { CaptureMode } from '@shared/messages'
@@ -51,6 +51,12 @@ function handleClick(e: MouseEvent) {
   const reactInfo = inspectReactComponent(element)
   if (reactInfo) {
     data.reactComponent = reactInfo
+  }
+
+  // Discover CSS custom properties
+  const cssVars = discoverCssVariables(element, document)
+  if (Object.keys(cssVars).length > 0) {
+    data.cssVariables = cssVars
   }
 
   chrome.runtime.sendMessage({ type: 'ELEMENT_SELECTED', data })

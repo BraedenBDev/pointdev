@@ -55,6 +55,7 @@ export interface SelectedElementData {
     name: string
     filePath?: string
   }
+  cssVariables?: Record<string, string>
 }
 
 export interface VoiceRecordingData {

@@ -78,6 +78,13 @@ function formatTargetElement(session: CaptureSession): string {
     lines.push(`- Box Model: ${formatBoxModel(el.boxModel)}`)
   }
 
+  if (el.cssVariables && Object.keys(el.cssVariables).length > 0) {
+    const varStr = Object.entries(el.cssVariables)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(', ')
+    lines.push(`- CSS Variables: ${varStr}`)
+  }
+
   lines.push(`- DOM: ${truncateDom(el.domSubtree)}`)
 
   return lines.join('\n')
