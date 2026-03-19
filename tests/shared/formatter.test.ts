@@ -16,6 +16,8 @@ function makeSession(overrides: Partial<CaptureSession> = {}): CaptureSession {
     annotations: [],
     cursorTrace: [],
     screenshots: [],
+    consoleErrors: [],
+    failedRequests: [],
     ...overrides,
   }
 }
@@ -258,5 +260,27 @@ describe('formatSession', () => {
     }))
     expect(output).toContain('Touch: supported')
     expect(output).not.toContain('Color scheme')
+  })
+
+  it('formats console errors and failed requests', () => {
+    const output = formatSession(makeSession({
+      consoleErrors: [
+        { level: 'error', message: 'TypeError: Cannot read property', stack: 'at Component.render (app.js:42)', timestampMs: 5000 },
+        { level: 'warn', message: 'Deprecated API usage', timestampMs: 8000 },
+      ],
+      failedRequests: [
+        { method: 'GET', url: '/api/users', status: 404, statusText: 'Not Found', timestampMs: 3000 },
+      ],
+    }))
+    expect(output).toContain('## Console & Network')
+    expect(output).toContain('TypeError: Cannot read property')
+    expect(output).toContain('Warning: Deprecated API usage')
+    expect(output).toContain('GET /api/users')
+    expect(output).toContain('404 Not Found')
+  })
+
+  it('omits Console & Network section when empty', () => {
+    const output = formatSession(makeSession())
+    expect(output).not.toContain('## Console & Network')
   })
 })

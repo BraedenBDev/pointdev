@@ -1,4 +1,4 @@
-import type { CaptureSession, SelectedElementData, AnnotationData, CursorSampleData, VoiceSegment, ElementScreenshot, DeviceMetadata } from '@shared/types'
+import type { CaptureSession, SelectedElementData, AnnotationData, CursorSampleData, VoiceSegment, ElementScreenshot, DeviceMetadata, ConsoleEntry, FailedRequest } from '@shared/types'
 import { createEmptySession } from '@shared/types'
 
 export class SessionStore {
@@ -53,6 +53,13 @@ export class SessionStore {
   addScreenshot(screenshot: ElementScreenshot): void {
     if (!this.session) return
     this.session.screenshots.push(screenshot)
+    this.persist()
+  }
+
+  addConsoleBatch(consoleBatch: ConsoleEntry[], requestBatch: FailedRequest[]): void {
+    if (!this.session) return
+    this.session.consoleErrors.push(...consoleBatch)
+    this.session.failedRequests.push(...requestBatch)
     this.persist()
   }
 

@@ -30,6 +30,10 @@ export function formatSession(session: CaptureSession): string {
     sections.push(formatScreenshots(session))
   }
 
+  if (session.consoleErrors.length > 0 || session.failedRequests.length > 0) {
+    sections.push(formatConsoleNetwork(session))
+  }
+
   return sections.join('\n\n')
 }
 
@@ -209,6 +213,34 @@ function formatScreenshots(session: CaptureSession): string {
     const ts = formatTimestamp(s.timestampMs)
     lines.push(`${i + 1}. [${ts}] ${s.selector} (${s.width}x${s.height}px)`)
   }
+  return lines.join('\n')
+}
+
+function formatConsoleNetwork(session: CaptureSession): string {
+  const lines = ['## Console & Network']
+
+  if (session.consoleErrors.length > 0) {
+    lines.push('Errors:')
+    for (const entry of session.consoleErrors) {
+      const ts = formatTimestamp(entry.timestampMs)
+      const prefix = entry.level === 'warn' ? 'Warning' : ''
+      lines.push(`- [${ts}] ${prefix ? prefix + ': ' : ''}${entry.message}`)
+      if (entry.stack) {
+        lines.push(`    ${entry.stack.split('\n')[0]}`)
+      }
+    }
+  }
+
+  if (session.failedRequests.length > 0) {
+    if (session.consoleErrors.length > 0) lines.push('')
+    lines.push('Failed requests:')
+    for (const req of session.failedRequests) {
+      const ts = formatTimestamp(req.timestampMs)
+      const statusStr = req.status === 0 ? '0 (network error)' : `${req.status} ${req.statusText}`
+      lines.push(`- [${ts}] ${req.method} ${req.url} → ${statusStr}`)
+    }
+  }
+
   return lines.join('\n')
 }
 

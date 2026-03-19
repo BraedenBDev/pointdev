@@ -62,6 +62,52 @@ export async function handleMessage(
         pageInfo?.title || fullTab.title || '',
         pageInfo?.viewport || { width: fullTab.width || 1200, height: fullTab.height || 800 }
       )
+
+      // Inject console/network capture into the page's main world
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          world: 'MAIN' as any,
+          func: (startedAt: number) => {
+            // Inline the main-world capture logic
+            // (imported version can't cross the world boundary)
+            const origError = console.error, origWarn = console.warn
+            const origFetch = window.fetch, origOpen = XMLHttpRequest.prototype.open
+            const origSend = XMLHttpRequest.prototype.send
+            const entries: any[] = [], requests: any[] = []
+            const ts = () => Date.now() - startedAt
+
+            console.error = function(...a: any[]) {
+              entries.push({ level: 'error', message: a.map(String).join(' ').slice(0, 500), stack: new Error().stack?.split('\n').slice(2, 5).join('\n'), timestampMs: ts() })
+              return origError.apply(console, a)
+            }
+            console.warn = function(...a: any[]) {
+              entries.push({ level: 'warn', message: a.map(String).join(' ').slice(0, 500), timestampMs: ts() })
+              return origWarn.apply(console, a)
+            }
+            window.fetch = function(input: any, init?: any) {
+              const m = init?.method || 'GET', u = String(typeof input === 'string' ? input : input?.url || input).slice(0, 200)
+              return origFetch.apply(window, [input, init]).then(
+                (r: any) => { if (!r.ok) requests.push({ method: m, url: u, status: r.status, statusText: r.statusText, timestampMs: ts() }); return r },
+                (e: any) => { requests.push({ method: m, url: u, status: 0, statusText: e.message || 'Network error', timestampMs: ts() }); throw e }
+              )
+            } as any
+            XMLHttpRequest.prototype.open = function(m: string, u: any, ...r: any[]) { (this as any).__pd_m = m; (this as any).__pd_u = String(u).slice(0, 200); return origOpen.apply(this, [m, u, ...r] as any) }
+            XMLHttpRequest.prototype.send = function(...a: any[]) {
+              this.addEventListener('loadend', () => { if (this.status >= 400 || this.status === 0) requests.push({ method: (this as any).__pd_m || 'GET', url: (this as any).__pd_u || '', status: this.status, statusText: this.statusText || '', timestampMs: ts() }) })
+              return origSend.apply(this, a)
+            }
+            window.addEventListener('error', (e) => { entries.push({ level: 'error', message: (e.message || 'Uncaught error').slice(0, 500), stack: e.filename ? `${e.filename}:${e.lineno}:${e.colno}` : undefined, timestampMs: ts() }) })
+            window.addEventListener('unhandledrejection', (e) => { entries.push({ level: 'error', message: (e.reason?.message || String(e.reason)).slice(0, 500), stack: e.reason?.stack?.split('\n').slice(0, 3).join('\n'), timestampMs: ts() }) })
+            const iv = setInterval(() => { if (entries.length || requests.length) document.dispatchEvent(new CustomEvent('pointdev-console-batch', { detail: { entries: entries.splice(0), requests: requests.splice(0) } })) }, 500)
+            document.addEventListener('pointdev-console-stop', () => { console.error = origError; console.warn = origWarn; window.fetch = origFetch; XMLHttpRequest.prototype.open = origOpen; XMLHttpRequest.prototype.send = origSend; clearInterval(iv); if (entries.length || requests.length) document.dispatchEvent(new CustomEvent('pointdev-console-batch', { detail: { entries: entries.splice(0), requests: requests.splice(0) } })) }, { once: true })
+          },
+          args: [Date.now()],
+        })
+      } catch {
+        // Main-world injection failed (e.g., chrome:// pages) — continue without it
+      }
+
       return { type: 'SESSION_UPDATED', session }
     }
 
@@ -132,6 +178,11 @@ export async function handleMessage(
         // Screenshot capture failed, continue without it
         return undefined
       }
+    }
+
+    case 'CONSOLE_BATCH': {
+      store.addConsoleBatch(message.data.entries, message.data.requests)
+      return undefined
     }
 
     default:
