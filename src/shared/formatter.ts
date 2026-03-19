@@ -1,4 +1,4 @@
-import type { CaptureSession, CircleCoords, ArrowCoords, BoxModel } from './types'
+import type { CaptureSession, CircleCoords, ArrowCoords, FreehandCoords, RectangleCoords, BoxModel } from './types'
 
 export function formatSession(session: CaptureSession): string {
   const sections: string[] = []
@@ -154,9 +154,19 @@ function formatAnnotations(session: CaptureSession): string {
     if (ann.type === 'circle') {
       const c = ann.coordinates as CircleCoords
       lines.push(`${i + 1}. [${ts}] Circle around ${target} at (${c.centerX}, ${c.centerY}), radius ${c.radiusX}px`)
-    } else {
+    } else if (ann.type === 'arrow') {
       const a = ann.coordinates as ArrowCoords
       lines.push(`${i + 1}. [${ts}] Arrow from (${a.startX}, ${a.startY}) to (${a.endX}, ${a.endY}), pointing at ${target}`)
+    } else if (ann.type === 'freehand') {
+      const f = ann.coordinates as FreehandCoords
+      const xs = f.points.map(p => p.x)
+      const ys = f.points.map(p => p.y)
+      const w = Math.round(Math.max(...xs) - Math.min(...xs))
+      const h = Math.round(Math.max(...ys) - Math.min(...ys))
+      lines.push(`${i + 1}. [${ts}] Freehand around ${target} (${f.points.length} points, ~${w}x${h}px area)`)
+    } else if (ann.type === 'rectangle') {
+      const r = ann.coordinates as RectangleCoords
+      lines.push(`${i + 1}. [${ts}] Rectangle over ${target} at (${r.x}, ${r.y}), ${r.width}x${r.height}px`)
     }
 
     if (ann.nearestElementContext) {

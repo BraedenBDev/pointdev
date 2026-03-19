@@ -71,8 +71,8 @@ export interface VoiceSegment {
 }
 
 export interface AnnotationData {
-  type: 'circle' | 'arrow'
-  coordinates: CircleCoords | ArrowCoords
+  type: 'circle' | 'arrow' | 'freehand' | 'rectangle'
+  coordinates: CircleCoords | ArrowCoords | FreehandCoords | RectangleCoords
   timestampMs: number
   nearestElement?: string
   nearestElementContext?: {
@@ -94,6 +94,17 @@ export interface ArrowCoords {
   startY: number
   endX: number
   endY: number
+}
+
+export interface FreehandCoords {
+  points: Array<{ x: number; y: number }>
+}
+
+export interface RectangleCoords {
+  x: number
+  y: number
+  width: number
+  height: number
 }
 
 export interface CursorSampleData {

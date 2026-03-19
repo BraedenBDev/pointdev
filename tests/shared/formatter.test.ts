@@ -267,6 +267,37 @@ describe('formatSession', () => {
     expect(output).not.toContain('CSS Variables')
   })
 
+  it('formats freehand annotations', () => {
+    const output = formatSession(makeSession({
+      annotations: [{
+        type: 'freehand',
+        coordinates: {
+          points: [
+            { x: 100, y: 200 }, { x: 150, y: 210 }, { x: 200, y: 190 },
+            { x: 250, y: 220 }, { x: 300, y: 200 },
+          ],
+        },
+        timestampMs: 5000,
+        nearestElement: 'button.submit',
+      }],
+    }))
+    expect(output).toContain('Freehand around button.submit')
+    expect(output).toContain('5 points')
+  })
+
+  it('formats rectangle annotations', () => {
+    const output = formatSession(makeSession({
+      annotations: [{
+        type: 'rectangle',
+        coordinates: { x: 100, y: 200, width: 300, height: 150 },
+        timestampMs: 8000,
+        nearestElement: 'div.card',
+      }],
+    }))
+    expect(output).toContain('Rectangle over div.card')
+    expect(output).toContain('300x150px')
+  })
+
   it('shows touch support when enabled', () => {
     const output = formatSession(makeSession({
       device: {

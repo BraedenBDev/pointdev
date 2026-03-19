@@ -9,7 +9,9 @@ interface Point { clientX: number; clientY: number }
 
 interface StoredCircle { type: 'circle'; cx: number; cy: number; rx: number; ry: number }
 interface StoredArrow { type: 'arrow'; sx: number; sy: number; ex: number; ey: number }
-type StoredAnnotation = StoredCircle | StoredArrow
+interface StoredFreehand { type: 'freehand'; points: Array<{ x: number; y: number }> }
+interface StoredRectangle { type: 'rectangle'; x: number; y: number; w: number; h: number }
+type StoredAnnotation = StoredCircle | StoredArrow | StoredFreehand | StoredRectangle
 
 export class CanvasOverlay {
   private canvas: HTMLCanvasElement
@@ -22,7 +24,10 @@ export class CanvasOverlay {
   private scrollRAF: number | null = null
   private boundOnScroll: () => void
   // Track in-progress preview so scroll redraws can preserve it
-  private currentPreview: { type: 'circle' | 'arrow'; start: Point; current: Point } | null = null
+  private currentPreview:
+    | { type: 'circle' | 'arrow' | 'rectangle'; start: Point; current: Point }
+    | { type: 'freehand'; points: Point[] }
+    | null = null
 
   constructor(doc: Document, win: Window) {
     this.doc = doc
@@ -81,6 +86,16 @@ export class CanvasOverlay {
     this.redraw()
   }
 
+  drawFreehandPreview(points: Point[]): void {
+    this.currentPreview = { type: 'freehand', points }
+    this.redraw()
+  }
+
+  drawRectanglePreview(start: Point, current: Point): void {
+    this.currentPreview = { type: 'rectangle', start, current }
+    this.redraw()
+  }
+
   completeAnnotation(
     start: Point,
     end: Point,
@@ -133,7 +148,50 @@ export class CanvasOverlay {
       }
     }
 
+    if (this.mode === 'rectangle') {
+      const x = Math.min(start.clientX, end.clientX)
+      const y = Math.min(start.clientY, end.clientY)
+      const w = Math.abs(end.clientX - start.clientX)
+      const h = Math.abs(end.clientY - start.clientY)
+
+      if (w < 10 && h < 10) return null
+
+      this.drawnAnnotations.push({
+        type: 'rectangle', x: x + scrollX, y: y + scrollY, w, h,
+      })
+      this.redraw()
+
+      return {
+        type: 'rectangle' as const,
+        coordinates: { x: x + scrollX, y: y + scrollY, width: w, height: h },
+        timestampMs,
+      }
+    }
+
     return null
+  }
+
+  completeFreehandAnnotation(
+    points: Point[],
+    captureStartedAt: number,
+    now: number
+  ): AnnotationData | null {
+    if (this.mode !== 'freehand' || points.length < 3) return null
+
+    this.currentPreview = null
+    const scrollX = this.win.scrollX
+    const scrollY = this.win.scrollY
+    const timestampMs = now - captureStartedAt
+
+    const pagePoints = points.map(p => ({ x: p.clientX + scrollX, y: p.clientY + scrollY }))
+    this.drawnAnnotations.push({ type: 'freehand', points: pagePoints })
+    this.redraw()
+
+    return {
+      type: 'freehand' as const,
+      coordinates: { points: pagePoints },
+      timestampMs,
+    }
   }
 
   private redraw(): void {
@@ -144,18 +202,30 @@ export class CanvasOverlay {
     for (const ann of this.drawnAnnotations) {
       if (ann.type === 'circle') {
         this.drawEllipse(ann.cx - sx, ann.cy - sy, ann.rx, ann.ry)
-      } else {
+      } else if (ann.type === 'arrow') {
         this.drawArrow(ann.sx - sx, ann.sy - sy, ann.ex - sx, ann.ey - sy)
+      } else if (ann.type === 'freehand') {
+        this.drawPolyline(ann.points.map(p => ({ x: p.x - sx, y: p.y - sy })))
+      } else if (ann.type === 'rectangle') {
+        this.drawRect(ann.x - sx, ann.y - sy, ann.w, ann.h)
       }
     }
     // Re-render in-progress preview so it survives scroll redraws
     if (this.currentPreview) {
-      const { type, start, current } = this.currentPreview
-      if (type === 'circle') {
-        this.drawEllipse(start.clientX, start.clientY,
-          Math.abs(current.clientX - start.clientX), Math.abs(current.clientY - start.clientY))
+      if (this.currentPreview.type === 'freehand') {
+        this.drawPolyline(this.currentPreview.points.map(p => ({ x: p.clientX, y: p.clientY })))
       } else {
-        this.drawArrow(start.clientX, start.clientY, current.clientX, current.clientY)
+        const { type, start, current } = this.currentPreview
+        if (type === 'circle') {
+          this.drawEllipse(start.clientX, start.clientY,
+            Math.abs(current.clientX - start.clientX), Math.abs(current.clientY - start.clientY))
+        } else if (type === 'arrow') {
+          this.drawArrow(start.clientX, start.clientY, current.clientX, current.clientY)
+        } else if (type === 'rectangle') {
+          const x = Math.min(start.clientX, current.clientX)
+          const y = Math.min(start.clientY, current.clientY)
+          this.drawRect(x, y, Math.abs(current.clientX - start.clientX), Math.abs(current.clientY - start.clientY))
+        }
       }
     }
   }
@@ -188,6 +258,21 @@ export class CanvasOverlay {
     this.ctx.lineTo(-ARROW_HEAD_SIZE, ARROW_HEAD_SIZE / 2)
     this.ctx.fill()
     this.ctx.restore()
+  }
+
+  private drawPolyline(points: Array<{ x: number; y: number }>): void {
+    if (points.length < 2) return
+    this.ctx.beginPath()
+    this.ctx.moveTo(points[0].x, points[0].y)
+    for (let i = 1; i < points.length; i++) {
+      this.ctx.lineTo(points[i].x, points[i].y)
+    }
+    this.ctx.stroke()
+  }
+
+  private drawRect(x: number, y: number, w: number, h: number): void {
+    this.ctx.beginPath()
+    this.ctx.strokeRect(x, y, w, h)
   }
 
   destroy(): void {
