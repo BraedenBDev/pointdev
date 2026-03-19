@@ -196,18 +196,17 @@ describe('formatSession', () => {
     expect(domLine!.length).toBeLessThan(600)
   })
 
-  it('formats element screenshots with timestamps and dimensions', () => {
+  it('formats annotated screenshots with timestamps', () => {
     const output = formatSession(makeSession({
       screenshots: [
-        { selector: 'div.hero > h1', timestampMs: 5000, dataUrl: 'data:image/png;base64,abc', width: 340, height: 50 },
-        { selector: 'nav > a.pricing', timestampMs: 12000, dataUrl: 'data:image/png;base64,xyz', width: 120, height: 30 },
+        { dataUrl: '', timestampMs: 5000, viewport: { scrollX: 0, scrollY: 0 }, annotationIndices: [0], descriptionParts: ['Circle around div.hero > h1'], voiceContext: 'the font is too small' },
+        { dataUrl: '', timestampMs: 12000, viewport: { scrollX: 0, scrollY: 500 }, annotationIndices: [1], descriptionParts: ['Selected nav > a.pricing'] },
       ],
     }))
     expect(output).toContain('## Screenshots')
-    expect(output).toContain('1. [00:05] div.hero > h1 (340x50px)')
-    expect(output).toContain('2. [00:12] nav > a.pricing (120x30px)')
-    expect(output).not.toContain('base64,abc')
-    expect(output).not.toContain('base64,xyz')
+    expect(output).toContain('1. [00:05] Circle around div.hero > h1 — "the font is too small"')
+    expect(output).toContain('2. [00:12] Selected nav > a.pricing')
+    expect(output).not.toContain('base64')
   })
 
   it('omits Screenshots section when no screenshots', () => {

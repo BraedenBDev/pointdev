@@ -1,4 +1,4 @@
-import type { CaptureSession, SelectedElementData, AnnotationData, CursorSampleData, VoiceSegment, ElementScreenshot, DeviceMetadata, ConsoleEntry, FailedRequest } from '@shared/types'
+import type { CaptureSession, SelectedElementData, AnnotationData, CursorSampleData, VoiceSegment, AnnotatedScreenshot, DeviceMetadata, ConsoleEntry, FailedRequest } from '@shared/types'
 import { createEmptySession } from '@shared/types'
 
 export class SessionStore {
@@ -50,9 +50,26 @@ export class SessionStore {
     this.persist()
   }
 
-  addScreenshot(screenshot: ElementScreenshot): void {
+  addAnnotatedScreenshot(screenshot: AnnotatedScreenshot): void {
     if (!this.session) return
+    // Cap at 10 screenshots (FIFO eviction)
+    if (this.session.screenshots.length >= 10) {
+      this.session.screenshots.shift()
+    }
     this.session.screenshots.push(screenshot)
+    this.persist()
+  }
+
+  updateLastScreenshot(screenshot: AnnotatedScreenshot): void {
+    if (!this.session || this.session.screenshots.length === 0) return
+    const last = this.session.screenshots[this.session.screenshots.length - 1]
+    last.dataUrl = screenshot.dataUrl
+    last.timestampMs = screenshot.timestampMs
+    last.annotationIndices.push(...screenshot.annotationIndices)
+    last.descriptionParts = [...new Set([...last.descriptionParts, ...screenshot.descriptionParts])]
+    if (screenshot.voiceContext && !last.voiceContext) {
+      last.voiceContext = screenshot.voiceContext
+    }
     this.persist()
   }
 
@@ -85,7 +102,11 @@ export class SessionStore {
 
   private persist(): void {
     try {
-      chrome.storage.session.set({ activeSession: this.session })
+      const sessionForStorage = {
+        ...this.session,
+        screenshots: this.session!.screenshots.map(s => ({ ...s, dataUrl: '' })),
+      }
+      chrome.storage.session.set({ activeSession: sessionForStorage })
     } catch {
       // Silently fail in environments without chrome.storage
     }

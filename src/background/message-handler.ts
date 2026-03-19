@@ -164,18 +164,59 @@ export async function handleMessage(
 
       try {
         const dataUrl = await chrome.tabs.captureVisibleTab()
-        const { selector, rect, timestampMs } = message.data
-        const screenshot = {
-          selector,
-          timestampMs,
-          dataUrl,
-          width: Math.round(rect.width),
-          height: Math.round(rect.height),
+        const { timestampMs, viewport, annotationIndex, selectedElementSelector, replacesPrevious } = message.data
+
+        // Build description parts
+        const annotationIndices: number[] = []
+        const descParts: string[] = []
+
+        if (annotationIndex != null) {
+          // -1 sentinel means "the annotation that was just added"
+          const resolvedIndex = annotationIndex === -1 ? session.annotations.length - 1 : annotationIndex
+          if (resolvedIndex >= 0 && resolvedIndex < session.annotations.length) {
+            annotationIndices.push(resolvedIndex)
+            const ann = session.annotations[resolvedIndex]
+            if (ann) {
+              const target = ann.nearestElement || 'unknown element'
+              descParts.push(`${ann.type.charAt(0).toUpperCase() + ann.type.slice(1)} around ${target}`)
+            }
+          }
         }
-        store.addScreenshot(screenshot)
-        return { type: 'SCREENSHOT_CAPTURED', data: screenshot }
+
+        if (selectedElementSelector) {
+          descParts.push(`Selected ${selectedElementSelector}`)
+        }
+
+        // Find overlapping voice context (±2s window, join multiple segments)
+        let voiceContext: string | undefined
+        if (session.voiceRecording) {
+          const overlapping = session.voiceRecording.segments.filter(seg =>
+            seg.startMs <= timestampMs + 2000 && seg.endMs >= timestampMs - 2000
+          )
+          if (overlapping.length > 0) {
+            voiceContext = overlapping.map(s => s.text).join(' ')
+          }
+        }
+
+        const screenshot = {
+          dataUrl,
+          timestampMs,
+          viewport,
+          annotationIndices,
+          descriptionParts: descParts.length > 0 ? descParts : ['Page capture'],
+          voiceContext,
+        }
+
+        if (replacesPrevious) {
+          store.updateLastScreenshot(screenshot)
+        } else {
+          store.addAnnotatedScreenshot(screenshot)
+        }
+
+        const updated = store.getSession()
+        return updated ? { type: 'SESSION_UPDATED', session: updated } : undefined
       } catch {
-        // Screenshot capture failed, continue without it
+        // captureVisibleTab failed (e.g., chrome:// pages)
         return undefined
       }
     }
