@@ -28,6 +28,9 @@ export interface CaptureSession {
   cursorTrace: CursorSampleData[]
 
   screenshots: ElementScreenshot[]
+
+  consoleErrors: ConsoleEntry[]
+  failedRequests: FailedRequest[]
 }
 
 export interface ElementScreenshot {
@@ -115,6 +118,21 @@ export interface CursorSampleData {
   dwellMs?: number
 }
 
+export interface ConsoleEntry {
+  level: 'error' | 'warn'
+  message: string
+  stack?: string
+  timestampMs: number
+}
+
+export interface FailedRequest {
+  method: string
+  url: string
+  status: number
+  statusText: string
+  timestampMs: number
+}
+
 export function createEmptySession(id: string, tabId: number, url: string, title: string, viewport: { width: number; height: number }): CaptureSession {
   return {
     id,
@@ -129,5 +147,7 @@ export function createEmptySession(id: string, tabId: number, url: string, title
     annotations: [],
     cursorTrace: [],
     screenshots: [],
+    consoleErrors: [],
+    failedRequests: [],
   }
 }

@@ -17,6 +17,7 @@ const HANDLED_TYPES = new Set([
   'START_CAPTURE', 'STOP_CAPTURE', 'SET_MODE',
   'TRANSCRIPT_UPDATE', 'ELEMENT_SELECTED', 'ANNOTATION_ADDED',
   'CURSOR_BATCH', 'DEVICE_METADATA', 'SCREENSHOT_REQUEST',
+  'CONSOLE_BATCH',
 ])
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

@@ -1,4 +1,4 @@
-import type { SelectedElementData, AnnotationData, CursorSampleData, VoiceSegment, CaptureSession, ElementScreenshot, DeviceMetadata } from './types'
+import type { SelectedElementData, AnnotationData, CursorSampleData, VoiceSegment, CaptureSession, ElementScreenshot, DeviceMetadata, ConsoleEntry, FailedRequest } from './types'
 
 export type Message =
   // Sidepanel → Service Worker
@@ -19,6 +19,7 @@ export type Message =
   | { type: 'CURSOR_BATCH'; data: CursorSampleData[] }
   | { type: 'SCREENSHOT_REQUEST'; data: { selector: string; rect: { x: number; y: number; width: number; height: number }; timestampMs: number } }
   | { type: 'DEVICE_METADATA'; data: DeviceMetadata }
+  | { type: 'CONSOLE_BATCH'; data: { entries: ConsoleEntry[]; requests: FailedRequest[] } }
   | { type: 'PONG' }
 
   // Service Worker → Content Script (response)

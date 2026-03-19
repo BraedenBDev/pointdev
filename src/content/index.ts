@@ -1,5 +1,6 @@
 import { CanvasOverlay } from './canvas-overlay'
 import { CursorTracker } from './cursor-tracker'
+import { ConsoleNetworkCapture } from './console-network-capture'
 import { extractElementData, findNearestElement, discoverCssVariables, getAncestryChain } from './element-selector'
 import { inspectReactComponent } from './react-inspector'
 import { collectDeviceMetadata } from './device-metadata'
@@ -24,6 +25,7 @@ import('css-selector-generator').then(mod => {
 
 let overlay: CanvasOverlay | null = null
 let cursorTracker: CursorTracker | null = null
+let consoleCapture: ConsoleNetworkCapture | null = null
 let captureStartedAt = 0
 let isCapturing = false
 let currentMode: CaptureMode = 'select'
@@ -235,6 +237,11 @@ function startCapture() {
   })
   cursorTracker.start(captureStartedAt, document, window)
 
+  consoleCapture = new ConsoleNetworkCapture(captureStartedAt, (entries, requests) => {
+    chrome.runtime.sendMessage({ type: 'CONSOLE_BATCH', data: { entries, requests } })
+  })
+  consoleCapture.start()
+
   document.addEventListener('click', handleClick, true)
   document.addEventListener('mousedown', handleMouseDown, true)
   document.addEventListener('mousemove', handleMouseMove, true)
@@ -254,6 +261,11 @@ function stopCapture() {
   ancestryChain = []
   ancestryIndex = 0
   updateHighlight(null)
+
+  if (consoleCapture) {
+    consoleCapture.stop()
+    consoleCapture = null
+  }
 
   if (cursorTracker) {
     const remaining = cursorTracker.stop()
