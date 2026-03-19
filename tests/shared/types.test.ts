@@ -17,6 +17,8 @@ describe('CaptureSession types', () => {
       annotations: [],
       cursorTrace: [],
       screenshots: [],
+      consoleErrors: [],
+      failedRequests: [],
     }
     expect(session.id).toBe('test-1')
     expect(session.annotations).toHaveLength(0)
@@ -55,8 +57,10 @@ describe('CaptureSession types', () => {
         { x: 340, y: 180, timestampMs: 2200, nearestElement: 'div.hero > h1', dwellMs: 3100 },
       ],
       screenshots: [
-        { selector: 'div.hero > h1', timestampMs: 5000, dataUrl: 'data:image/png;base64,abc', width: 340, height: 50 },
+        { dataUrl: 'data:image/png;base64,abc', timestampMs: 5000, viewport: { scrollX: 0, scrollY: 0 }, annotationIndices: [0], descriptionParts: ['Circle around div.hero > h1'], voiceContext: 'the font is too small' },
       ],
+      consoleErrors: [],
+      failedRequests: [],
     }
     expect(session.selectedElement?.reactComponent?.name).toBe('HeroSection')
     expect(session.annotations).toHaveLength(1)

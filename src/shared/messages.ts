@@ -1,4 +1,4 @@
-import type { SelectedElementData, AnnotationData, CursorSampleData, VoiceSegment, CaptureSession, ElementScreenshot, DeviceMetadata, ConsoleEntry, FailedRequest } from './types'
+import type { SelectedElementData, AnnotationData, CursorSampleData, VoiceSegment, CaptureSession, AnnotatedScreenshot, DeviceMetadata, ConsoleEntry, FailedRequest } from './types'
 
 export type Message =
   // Sidepanel → Service Worker
@@ -23,7 +23,7 @@ export type Message =
   | { type: 'PONG' }
 
   // Service Worker → Content Script (response)
-  | { type: 'SCREENSHOT_CAPTURED'; data: ElementScreenshot }
+  | { type: 'SCREENSHOT_CAPTURED'; data: AnnotatedScreenshot }
 
   // Service Worker → Sidepanel
   | { type: 'SESSION_UPDATED'; session: CaptureSession }

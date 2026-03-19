@@ -228,7 +228,9 @@ function formatScreenshots(session: CaptureSession): string {
   for (let i = 0; i < session.screenshots.length; i++) {
     const s = session.screenshots[i]
     const ts = formatTimestamp(s.timestampMs)
-    lines.push(`${i + 1}. [${ts}] ${s.selector} (${s.width}x${s.height}px)`)
+    const desc = s.descriptionParts.join(' | ')
+    const voice = s.voiceContext ? ` — "${s.voiceContext}"` : ''
+    lines.push(`${i + 1}. [${ts}] ${desc}${voice}`)
   }
   return lines.join('\n')
 }
