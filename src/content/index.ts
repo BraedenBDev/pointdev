@@ -60,6 +60,7 @@ function requestScreenshot(annotationIndex?: number, selectedElementSelector?: s
   // Wait for compositor to flush the canvas before capturing
   requestAnimationFrame(() => {
     setTimeout(() => {
+      console.log('[PointDev] Sending SCREENSHOT_REQUEST', { annotationIndex, selectedElementSelector, replacesPrevious })
       chrome.runtime.sendMessage({
         type: 'SCREENSHOT_REQUEST',
         data: {

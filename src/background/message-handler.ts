@@ -119,6 +119,7 @@ export async function handleMessage(
       await chrome.tabs.sendMessage(session.tabId, { type: 'REMOVE_CAPTURE' }).catch(() => {})
 
       const finalSession = store.endSession()!
+      console.log('[PointDev] CAPTURE_COMPLETE: screenshots=', finalSession.screenshots.length, 'annotations=', finalSession.annotations.length)
       return { type: 'CAPTURE_COMPLETE', session: finalSession }
     }
 
@@ -160,10 +161,15 @@ export async function handleMessage(
 
     case 'SCREENSHOT_REQUEST': {
       const session = store.getSession()
-      if (!session) return undefined
+      if (!session) {
+        console.log('[PointDev] SCREENSHOT_REQUEST: no active session')
+        return undefined
+      }
 
       try {
+        console.log('[PointDev] SCREENSHOT_REQUEST: calling captureVisibleTab')
         const dataUrl = await chrome.tabs.captureVisibleTab()
+        console.log('[PointDev] SCREENSHOT_REQUEST: captured', dataUrl.length, 'chars')
         const { timestampMs, viewport, annotationIndex, selectedElementSelector, replacesPrevious } = message.data
 
         // Build description parts
@@ -216,8 +222,8 @@ export async function handleMessage(
 
         const updated = store.getSession()
         return updated ? { type: 'SESSION_UPDATED', session: updated } : undefined
-      } catch {
-        // captureVisibleTab failed (e.g., chrome:// pages)
+      } catch (err) {
+        console.error('[PointDev] SCREENSHOT_REQUEST failed:', err)
         return undefined
       }
     }
