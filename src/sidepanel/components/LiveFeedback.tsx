@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { CaptureSession } from '@shared/types'
+import { ScreenshotThumbnail } from './ScreenshotThumbnail'
 
 interface LiveFeedbackProps {
   session: CaptureSession | null
@@ -46,8 +47,17 @@ export function LiveFeedback({ session, isListening, interimTranscript, transcri
           <strong>Annotations:</strong> {session.annotations.length}
           {session.annotations.map((ann, i) => (
             <div key={i} className="annotation-item">
-              {ann.type === 'circle' ? '\u25CB' : '\u2192'} {ann.nearestElement || 'element'}
+              {ann.type === 'circle' ? '\u25CB' : ann.type === 'arrow' ? '\u2192' : ann.type === 'freehand' ? '\u270E' : '\u25A1'} {ann.nearestElement || 'element'}
             </div>
+          ))}
+        </div>
+      )}
+
+      {session && session.screenshots.length > 0 && (
+        <div className="screenshots-list" style={{ marginBottom: 10 }}>
+          <strong>Screenshots:</strong> {session.screenshots.length}
+          {session.screenshots.map((ss, i) => (
+            <ScreenshotThumbnail key={i} screenshot={ss} size="small" />
           ))}
         </div>
       )}
