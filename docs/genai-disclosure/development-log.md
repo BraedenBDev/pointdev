@@ -617,3 +617,94 @@ Voice, annotations, and cursor tracking all captured simultaneously on https://a
 | Issue: Source file path resolution | GitHub #20 | Open |
 | Issue: Computed styles in annotation output | GitHub #21 | Open |
 | Issue: Mic tab lifecycle | GitHub #17 | Closed (PR #18) |
+
+---
+
+## Session 10 — 2026-03-19: Five-Issue Sprint & Auto-Screenshot Feature
+
+**Model:** Claude Opus 4.6 (Anthropic, via Claude Code CLI)
+**Duration:** ~4 hours
+**Human lead:** Braeden Bihag
+**AI role:** Sprint planner, parallel implementer, reviewer, feature designer
+
+### What happened
+
+1. **Five-issue sprint executed via parallel subagents.** Closed 5 GitHub issues in a single session using isolated git worktrees for parallel development:
+
+   - **#15 — Sidepanel-native speech recognition.** Eliminated the persistent mic-permission tab. SpeechRecognition now runs directly in the sidepanel context. The mic-permission tab only opens as a one-time permission gate and auto-closes. Deleted dead offscreen document code. Removed `offscreen` manifest permission.
+
+   - **#26 — CSS custom property discovery.** Scans `document.styleSheets` for rules matching the selected element, extracts `--custom-property` declarations. Uses duck-typing (`'selectorText' in rule`) instead of `instanceof CSSStyleRule` for cross-frame robustness. Capped at 50 variables. Pattern attributed to pi-annotate by Nico Bailon (MIT).
+
+   - **#25 — Element ancestry cycling.** Alt+scroll in select mode walks up/down the DOM tree from the hovered element. Visual feedback via dashed red outline. Capped at 10 ancestors, skips `data-pointdev` elements, stops at `document.body`. Wheel listener uses `{ passive: false }` for `preventDefault()`.
+
+   - **#8 — Freehand + rectangle annotation tools.** Extended the canvas overlay pipeline with two new annotation types. Freehand collects points on mousemove (3px throttle), rectangle uses two-corner drag. Both follow existing circle/arrow patterns. Extracted `getAnnotationFocalPoint()` helper for nearestElement resolution. Added mode buttons to CaptureControls.
+
+   - **#11 — Console errors + failed network requests.** Injects monkey-patching code into the page's main world via `chrome.scripting.executeScript({ world: 'MAIN' })`. Patches `console.error/warn`, `fetch`, `XMLHttpRequest.send`, and listens for `window.onerror` and `unhandledrejection`. Data bridges back via `CustomEvent('pointdev-console-batch')`. No new permissions required.
+
+2. **Sprint workflow.** Design spec written and reviewed → implementation plan written and reviewed → 5 parallel subagents in isolated worktrees → sequential merge (15 → 26 → 25 → 8 → 11) with conflict resolution → parallel code reviewer + code simplifier.
+
+3. **Post-sprint review and fixes.** Code reviewer found no critical issues. Code simplifier fixed 6 items:
+   - `formatBoxModel` unitless value bug (`"8 16 8 16px"` → `"8px 16px 8px 16px"`)
+   - Extracted `getAnnotationFocalPoint()` replacing inline `as any` casts
+   - Removed 4 redundant `as const` assertions in canvas-overlay
+   - Removed unnecessary `beginPath()` before `strokeRect()`
+   - Removed unused `captureStartedAt` field from `ConsoleNetworkCapture`
+   - Simplified warning label conditional in `formatConsoleNetwork`
+
+4. **Reviewer items addressed.** Rectangle min-size check changed from AND to OR (`w < 10 || h < 10`). Ancestry highlight + freehand points cleaned up on mode change.
+
+5. **Auto-screenshot feature designed and implemented.** Triggers `captureVisibleTab` after every annotation completion and element selection. Dedup logic groups captures within 2s on same scroll position. Screenshots enriched with descriptions and voice context. `ScreenshotThumbnail` component with Copy Image button. Storage strategy: in-memory only (dataUrl stripped from `chrome.storage.session` to avoid 1MB quota).
+
+6. **Screenshot bug identified.** Thumbnails not appearing in sidepanel after capture. Debug logging added to trace the pipeline (content script → service worker → captureVisibleTab). Investigation ongoing.
+
+7. **Submission timeline revised.** NLnet application now targets after March 25 open office hours (originally March 21). Roadmap updated.
+
+### Decisions and rationale
+
+| Decision | Made by | Rationale |
+|---|---|---|
+| Close 5 issues in one sprint | Braeden | Maximize repo activity before NLnet submission |
+| Parallel worktree subagents | Braeden | Proven workflow from Session 2, maximizes throughput |
+| Drop #9 (Vue/Svelte detection) from sprint | Braeden (AI recommended) | Hard to test without real Vue/Svelte apps, "help wanted" issue |
+| Main-world injection for console capture (#11) | AI (spec reviewer caught) | Content scripts run in isolated world — monkey-patching in content script world would NOT intercept page's console/fetch |
+| Duck-typing for CSS rule detection (#26) | AI (plan reviewer caught) | `instanceof CSSStyleRule` fails against mock objects in tests and across frames |
+| Screenshot approach A (captureVisibleTab on annotation) over B (video recording) | Braeden chose A, noted C (video) for future | Simpler, no new permissions, canvas already in DOM. Video recording filed as future issue. |
+| Submit after March 25 open office, not March 21 | Braeden | Attend NLnet open office hours first for feedback on application |
+
+### What was AI-generated vs. human-authored
+
+- **AI-generated:** Design spec, implementation plan, all 5 feature implementations, all tests, code review reports, code simplification, auto-screenshot design + implementation, debug logging
+- **Human-directed:** Sprint scope (which 5 issues), annotation tools scope (freehand + rectangle, no text), auto-screenshot approach selection, submission timeline change, workflow preferences (parallel agents, reviewer + simplifier after sprint)
+- **Human-identified:** Screenshot thumbnail bug (from manual testing), dedup as "possible failure vector to test aggressively"
+- **AI-identified, human-approved:** Main-world injection architecture, duck-typing for CSS rules, compositor delay for screenshots, in-memory-only storage strategy
+
+### Artifacts produced
+
+| Artifact | Path | Status |
+|---|---|---|
+| Design spec (5-issue sprint) | `docs/superpowers/specs/2026-03-19-five-issue-sprint-design.md` | Complete |
+| Implementation plan (5-issue sprint) | `docs/superpowers/plans/2026-03-19-five-issue-sprint.md` | Complete |
+| Sidepanel speech (#15) | `src/sidepanel/hooks/useSpeechRecognition.ts`, `public/mic-permission.js` | Merged, issue closed |
+| CSS variable discovery (#26) | `src/content/element-selector.ts` | Merged, issue closed |
+| Ancestry cycling (#25) | `src/content/element-selector.ts`, `src/content/index.ts` | Merged, issue closed |
+| Freehand + rectangle tools (#8) | `src/content/canvas-overlay.ts`, `src/content/index.ts`, `src/sidepanel/components/CaptureControls.tsx` | Merged, issue closed |
+| Console/network capture (#11) | `src/content/console-network-capture.ts`, `src/background/message-handler.ts` | Merged, issue closed |
+| Auto-screenshot design spec | `docs/superpowers/specs/2026-03-19-auto-screenshot-design.md` | Complete |
+| Auto-screenshot plan | `docs/superpowers/plans/2026-03-19-auto-screenshot.md` | Complete |
+| Auto-screenshot implementation | `src/shared/types.ts`, `src/background/message-handler.ts`, `src/content/index.ts`, `src/sidepanel/components/ScreenshotThumbnail.tsx` | Merged, bug under investigation |
+| Revised submission roadmap | `docs/submission-roadmap.md` | Updated |
+| Test suite | 775 tests across 98 files | All passing |
+
+### Test suite growth
+
+| Session | Tests | Test files |
+|---|---|---|
+| Session 4 (MVP) | 62 | 10 |
+| Session 10 (this session) | 775 | 98 |
+
+### Next steps
+
+- Debug screenshot pipeline (console logs added, awaiting test results)
+- Tag v0.1.0 release
+- Attend NLnet open office March 25
+- Submit application after open office feedback
