@@ -242,6 +242,31 @@ describe('formatSession', () => {
     expect(output).not.toContain('## Device')
   })
 
+  it('formats CSS variables when present', () => {
+    const output = formatSession(makeSession({
+      selectedElement: {
+        selector: '.card',
+        computedStyles: {},
+        domSubtree: '<div class="card"></div>',
+        boundingRect: { x: 0, y: 0, width: 100, height: 50, top: 0, right: 100, bottom: 50, left: 0, toJSON: () => ({}) },
+        cssVariables: { '--primary': '#2563eb', '--spacing': '16px' },
+      },
+    }))
+    expect(output).toContain('CSS Variables: --primary: #2563eb, --spacing: 16px')
+  })
+
+  it('omits CSS variables line when none found', () => {
+    const output = formatSession(makeSession({
+      selectedElement: {
+        selector: '.card',
+        computedStyles: {},
+        domSubtree: '<div class="card"></div>',
+        boundingRect: { x: 0, y: 0, width: 100, height: 50, top: 0, right: 100, bottom: 50, left: 0, toJSON: () => ({}) },
+      },
+    }))
+    expect(output).not.toContain('CSS Variables')
+  })
+
   it('shows touch support when enabled', () => {
     const output = formatSession(makeSession({
       device: {
