@@ -198,6 +198,24 @@ describe('CanvasOverlay', () => {
     expect(annotation).toBeNull()
   })
 
+  it('rejects thin rectangle sliver', () => {
+    const canvas = createMockCanvas()
+    const mockDoc = {
+      createElement: vi.fn(() => canvas),
+      body: { appendChild: vi.fn() },
+    }
+    const overlay = new CanvasOverlay(mockDoc as any, createMockWindow())
+    overlay.setMode('rectangle')
+
+    // 3px wide, 200px tall — should be rejected (either dimension < 10px)
+    const annotation = overlay.completeAnnotation(
+      { clientX: 100, clientY: 100 },
+      { clientX: 103, clientY: 300 },
+      1000, 2000
+    )
+    expect(annotation).toBeNull()
+  })
+
   it('records freehand annotation', () => {
     const canvas = createMockCanvas()
     const mockDoc = {

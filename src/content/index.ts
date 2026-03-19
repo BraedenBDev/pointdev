@@ -313,6 +313,16 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     case 'MODE_CHANGED':
       currentMode = message.mode
       if (overlay) overlay.setMode(message.mode)
+      // Clean up ancestry state and freehand points when leaving select/freehand mode
+      if (message.mode !== 'select') {
+        hoveredElement = null
+        ancestryChain = []
+        ancestryIndex = 0
+        updateHighlight(null)
+      }
+      if (message.mode !== 'freehand') {
+        freehandPoints = []
+      }
       sendResponse({ ok: true })
       return false // synchronous response
   }

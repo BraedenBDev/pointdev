@@ -154,7 +154,7 @@ export class CanvasOverlay {
       const w = Math.abs(end.clientX - start.clientX)
       const h = Math.abs(end.clientY - start.clientY)
 
-      if (w < 10 && h < 10) return null
+      if (w < 10 || h < 10) return null
 
       this.drawnAnnotations.push({
         type: 'rectangle', x: x + scrollX, y: y + scrollY, w, h,
