@@ -27,18 +27,19 @@ export interface CaptureSession {
 
   cursorTrace: CursorSampleData[]
 
-  screenshots: ElementScreenshot[]
+  screenshots: AnnotatedScreenshot[]
 
   consoleErrors: ConsoleEntry[]
   failedRequests: FailedRequest[]
 }
 
-export interface ElementScreenshot {
-  selector: string
-  timestampMs: number
+export interface AnnotatedScreenshot {
   dataUrl: string
-  width: number
-  height: number
+  timestampMs: number
+  viewport: { scrollX: number; scrollY: number }
+  annotationIndices: number[]
+  descriptionParts: string[]
+  voiceContext?: string
 }
 
 export interface BoxModel {

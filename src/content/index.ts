@@ -40,6 +40,40 @@ let ancestryChain: Element[] = []
 let ancestryIndex = 0
 let highlightEl: HTMLElement | null = null
 
+// Screenshot dedup state
+let lastScreenshotTime = 0
+let lastScreenshotScroll = { x: 0, y: 0 }
+
+function requestScreenshot(annotationIndex?: number, selectedElementSelector?: string): void {
+  const now = Date.now()
+  const currentScroll = { x: window.scrollX, y: window.scrollY }
+  const scrollChanged = currentScroll.x !== lastScreenshotScroll.x || currentScroll.y !== lastScreenshotScroll.y
+  const withinWindow = (now - lastScreenshotTime) < 2000 && lastScreenshotTime > 0
+  const replacesPrevious = withinWindow && !scrollChanged
+
+  // Update dedup state BEFORE the async capture — we measure time between
+  // user actions (intent), not between capture completions. This is an
+  // intentional deviation from the spec which updates inside the callback.
+  lastScreenshotTime = now
+  lastScreenshotScroll = currentScroll
+
+  // Wait for compositor to flush the canvas before capturing
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      chrome.runtime.sendMessage({
+        type: 'SCREENSHOT_REQUEST',
+        data: {
+          timestampMs: now - captureStartedAt,
+          viewport: currentScroll,
+          annotationIndex,
+          selectedElementSelector,
+          replacesPrevious,
+        },
+      })
+    }, 0)
+  })
+}
+
 function handleClick(e: MouseEvent) {
   if (!isCapturing || currentMode !== 'select') return
 
@@ -74,16 +108,8 @@ function handleClick(e: MouseEvent) {
 
   chrome.runtime.sendMessage({ type: 'ELEMENT_SELECTED', data })
 
-  // Request an element-scoped screenshot from the service worker
-  const rect = element.getBoundingClientRect()
-  chrome.runtime.sendMessage({
-    type: 'SCREENSHOT_REQUEST',
-    data: {
-      selector,
-      rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
-      timestampMs: Date.now() - captureStartedAt,
-    },
-  })
+  // Trigger annotated screenshot with dedup
+  requestScreenshot(undefined, selector)
 }
 
 function handleMouseDown(e: MouseEvent) {
@@ -186,6 +212,12 @@ function handleMouseUp(e: MouseEvent) {
     }
 
     chrome.runtime.sendMessage({ type: 'ANNOTATION_ADDED', data: annotation })
+
+    // Trigger annotated screenshot. Use -1 sentinel = "most recent annotation".
+    // Chrome guarantees message ordering from the same sender, so ANNOTATION_ADDED
+    // is processed before SCREENSHOT_REQUEST. The service worker resolves -1 to
+    // session.annotations.length - 1 (already handled in Task 3's handler).
+    requestScreenshot(-1)
   }
 }
 
@@ -233,6 +265,8 @@ function startCapture() {
   captureStartedAt = Date.now()
   isCapturing = true
   currentMode = 'select'
+  lastScreenshotTime = 0
+  lastScreenshotScroll = { x: 0, y: 0 }
 
   overlay = new CanvasOverlay(document, window)
   overlay.setMode('select')
