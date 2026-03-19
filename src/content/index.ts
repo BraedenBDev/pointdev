@@ -1,6 +1,6 @@
 import { CanvasOverlay } from './canvas-overlay'
 import { CursorTracker } from './cursor-tracker'
-import { extractElementData, findNearestElement } from './element-selector'
+import { extractElementData, findNearestElement, getAncestryChain } from './element-selector'
 import { inspectReactComponent } from './react-inspector'
 import { collectDeviceMetadata } from './device-metadata'
 import type { CaptureMode } from '@shared/messages'
@@ -30,13 +30,22 @@ let currentMode: CaptureMode = 'select'
 // Drawing state
 let drawStart: { clientX: number; clientY: number } | null = null
 
+// Ancestry cycling state
+let hoveredElement: Element | null = null
+let ancestryChain: Element[] = []
+let ancestryIndex = 0
+let highlightEl: HTMLElement | null = null
+
 function handleClick(e: MouseEvent) {
   if (!isCapturing || currentMode !== 'select') return
 
   e.preventDefault()
   e.stopPropagation()
 
-  const element = findNearestElement(e.clientX, e.clientY, document)
+  // Use ancestry-adjusted element if available, otherwise findNearestElement
+  const element = (ancestryChain.length > 0 && hoveredElement)
+    ? ancestryChain[ancestryIndex]
+    : findNearestElement(e.clientX, e.clientY, document)
   if (!element) return
 
   const selector = generateSelector ? generateSelector(element) : element.tagName.toLowerCase()
@@ -73,6 +82,17 @@ function handleMouseDown(e: MouseEvent) {
 }
 
 function handleMouseMove(e: MouseEvent) {
+  // Update hovered element for ancestry cycling in select mode
+  if (isCapturing && currentMode === 'select') {
+    const el = findNearestElement(e.clientX, e.clientY, document)
+    if (el !== hoveredElement) {
+      hoveredElement = el
+      ancestryChain = el ? getAncestryChain(el) : []
+      ancestryIndex = 0
+      updateHighlight(el)
+    }
+  }
+
   if (!drawStart || !overlay) return
   if (currentMode === 'circle') {
     overlay.drawCirclePreview(drawStart, { clientX: e.clientX, clientY: e.clientY })
@@ -123,6 +143,46 @@ function handleMouseUp(e: MouseEvent) {
   }
 }
 
+function updateHighlight(element: Element | null) {
+  if (highlightEl) {
+    highlightEl.remove()
+    highlightEl = null
+  }
+  if (!element) return
+
+  const rect = element.getBoundingClientRect()
+  highlightEl = document.createElement('div')
+  highlightEl.setAttribute('data-pointdev', 'highlight')
+  Object.assign(highlightEl.style, {
+    position: 'fixed',
+    top: `${rect.top}px`,
+    left: `${rect.left}px`,
+    width: `${rect.width}px`,
+    height: `${rect.height}px`,
+    outline: '2px dashed #FF3333',
+    pointerEvents: 'none',
+    zIndex: '2147483646',
+  })
+  document.body.appendChild(highlightEl)
+}
+
+function handleWheel(e: WheelEvent) {
+  if (!isCapturing || currentMode !== 'select' || !e.altKey) return
+  e.preventDefault()
+
+  if (ancestryChain.length === 0) return
+
+  if (e.deltaY < 0) {
+    // Scroll up = select parent
+    ancestryIndex = Math.min(ancestryIndex + 1, ancestryChain.length - 1)
+  } else {
+    // Scroll down = select child
+    ancestryIndex = Math.max(ancestryIndex - 1, 0)
+  }
+
+  updateHighlight(ancestryChain[ancestryIndex])
+}
+
 function startCapture() {
   captureStartedAt = Date.now()
   isCapturing = true
@@ -140,6 +200,7 @@ function startCapture() {
   document.addEventListener('mousedown', handleMouseDown, true)
   document.addEventListener('mousemove', handleMouseMove, true)
   document.addEventListener('mouseup', handleMouseUp, true)
+  document.addEventListener('wheel', handleWheel, { passive: false })
 }
 
 function stopCapture() {
@@ -149,6 +210,11 @@ function stopCapture() {
   document.removeEventListener('mousedown', handleMouseDown, true)
   document.removeEventListener('mousemove', handleMouseMove, true)
   document.removeEventListener('mouseup', handleMouseUp, true)
+  document.removeEventListener('wheel', handleWheel)
+  hoveredElement = null
+  ancestryChain = []
+  ancestryIndex = 0
+  updateHighlight(null)
 
   if (cursorTracker) {
     const remaining = cursorTracker.stop()
