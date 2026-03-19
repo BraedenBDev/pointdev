@@ -2,33 +2,46 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useSpeechRecognition } from '../../../src/sidepanel/hooks/useSpeechRecognition'
 
-// Mock chrome.runtime and chrome.storage
+// Mock SpeechRecognition
+class MockSpeechRecognition {
+  continuous = false
+  interimResults = false
+  lang = ''
+  onstart: (() => void) | null = null
+  onresult: ((e: any) => void) | null = null
+  onerror: ((e: any) => void) | null = null
+  onend: (() => void) | null = null
+  start = vi.fn(() => { this.onstart?.() })
+  stop = vi.fn(() => { this.onend?.() })
+}
+
 const messageListeners: Array<(message: any) => void> = []
 
 beforeEach(() => {
   messageListeners.length = 0
+  vi.stubGlobal('webkitSpeechRecognition', MockSpeechRecognition)
   vi.stubGlobal('chrome', {
     runtime: {
       onMessage: {
         addListener: vi.fn((fn: any) => messageListeners.push(fn)),
-        removeListener: vi.fn((fn: any) => {
-          const idx = messageListeners.indexOf(fn)
-          if (idx >= 0) messageListeners.splice(idx, 1)
-        }),
+        removeListener: vi.fn(),
       },
-      sendMessage: vi.fn((msg: any, cb?: any) => {
-        // Simulate MIC_TAB_PING response — tab is alive
-        if (msg.type === 'MIC_TAB_PING' && cb) cb({ alive: true })
-      }),
-      lastError: null,
+      sendMessage: vi.fn(),
       getURL: vi.fn((path: string) => `chrome-extension://test/${path}`),
     },
     storage: {
       local: {
         get: vi.fn().mockResolvedValue({ pointdev_mic_granted: true }),
         set: vi.fn().mockResolvedValue(undefined),
+        remove: vi.fn().mockResolvedValue(undefined),
       },
     },
+  })
+  // Mock navigator.permissions.query
+  Object.defineProperty(navigator, 'permissions', {
+    value: { query: vi.fn().mockResolvedValue({ state: 'granted' }) },
+    writable: true,
+    configurable: true,
   })
 })
 
@@ -40,66 +53,57 @@ describe('useSpeechRecognition', () => {
     expect(result.current.segments).toEqual([])
   })
 
-  it('reports available', () => {
+  it('reports available when SpeechRecognition exists', () => {
     const { result } = renderHook(() => useSpeechRecognition())
     expect(result.current.isAvailable).toBe(true)
   })
 
-  it('sends SPEECH_START to mic-permission tab', async () => {
+  it('resolves to granted when storage flag and permission match', async () => {
     const { result } = renderHook(() => useSpeechRecognition())
-    // Wait for async mic permission check to resolve
     await act(async () => { await new Promise(r => setTimeout(r, 10)) })
-    await act(async () => { result.current.start(Date.now()) })
-    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+    expect(result.current.micPermission).toBe('granted')
+  })
+
+  it('resolves to needs-setup when no storage flag', async () => {
+    (chrome.storage.local.get as any).mockResolvedValue({})
+    const { result } = renderHook(() => useSpeechRecognition())
+    await act(async () => { await new Promise(r => setTimeout(r, 10)) })
+    expect(result.current.micPermission).toBe('needs-setup')
+  })
+
+  it('creates SpeechRecognition locally on start', async () => {
+    const { result } = renderHook(() => useSpeechRecognition())
+    await act(async () => { await new Promise(r => setTimeout(r, 10)) })
+    act(() => { result.current.start(Date.now()) })
+    expect(result.current.isListening).toBe(true)
+  })
+
+  it('does not send SPEECH_START message (speech is local)', async () => {
+    const { result } = renderHook(() => useSpeechRecognition())
+    await act(async () => { await new Promise(r => setTimeout(r, 10)) })
+    act(() => { result.current.start(Date.now()) })
+    expect(chrome.runtime.sendMessage).not.toHaveBeenCalledWith(
       expect.objectContaining({ type: 'SPEECH_START' })
     )
   })
 
-  it('updates state when speech tab reports started', async () => {
+  it('stops recognition on stop()', async () => {
     const { result } = renderHook(() => useSpeechRecognition())
     await act(async () => { await new Promise(r => setTimeout(r, 10)) })
-    await act(async () => { result.current.start(Date.now()) })
-    act(() => {
-      messageListeners.forEach(fn => fn({ type: 'SPEECH_STARTED' }))
-    })
-    expect(result.current.isListening).toBe(true)
-  })
-
-  it('stops listening', async () => {
-    const { result } = renderHook(() => useSpeechRecognition())
-    await act(async () => { await new Promise(r => setTimeout(r, 10)) })
-    await act(async () => { result.current.start(Date.now()) })
+    act(() => { result.current.start(Date.now()) })
     act(() => { result.current.stop() })
     expect(result.current.isListening).toBe(false)
-    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: 'SPEECH_STOP' })
   })
 
-  it('accumulates segments from speech results', async () => {
+  it('receives MIC_PERMISSION_GRANTED from tab fallback', async () => {
+    (chrome.storage.local.get as any).mockResolvedValue({})
     const { result } = renderHook(() => useSpeechRecognition())
     await act(async () => { await new Promise(r => setTimeout(r, 10)) })
-    await act(async () => { result.current.start(Date.now()) })
-    act(() => {
-      messageListeners.forEach(fn => fn({
-        type: 'SPEECH_RESULT',
-        segments: [{ text: 'hello world', startMs: 1000, endMs: 2000 }],
-        interim: '',
-      }))
-    })
-    expect(result.current.segments).toHaveLength(1)
-    expect(result.current.transcript).toBe('hello world')
-  })
+    expect(result.current.micPermission).toBe('needs-setup')
 
-  it('handles errors from speech tab', async () => {
-    const { result } = renderHook(() => useSpeechRecognition())
-    await act(async () => { await new Promise(r => setTimeout(r, 10)) })
-    await act(async () => { result.current.start(Date.now()) })
     act(() => {
-      messageListeners.forEach(fn => fn({
-        type: 'SPEECH_ERROR',
-        error: 'Microphone access denied.',
-      }))
+      messageListeners.forEach(fn => fn({ type: 'MIC_PERMISSION_GRANTED' }))
     })
-    expect(result.current.error).toBe('Microphone access denied.')
-    expect(result.current.isListening).toBe(false)
+    expect(result.current.micPermission).toBe('granted')
   })
 })

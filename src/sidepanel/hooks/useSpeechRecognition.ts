@@ -15,11 +15,16 @@ interface UseSpeechRecognitionReturn {
 }
 
 const MIC_GRANTED_KEY = 'pointdev_mic_granted'
+function getSpeechRecognitionAPI() {
+  return typeof window !== 'undefined'
+    ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    : undefined
+}
 
-// Speech recognition runs in mic-permission.html (a visible extension tab)
-// because neither sidepanels nor offscreen documents can reliably get mic access.
-// The tab must stay open during capture. On sidepanel mount, we ensure the tab
-// exists — reopening it silently if the browser was restarted.
+// Speech recognition now runs directly in the sidepanel context.
+// The mic-permission tab is only used as a one-time permission gate
+// (it auto-closes after granting). Once permission is granted at the
+// extension origin, SpeechRecognition works in any extension page.
 export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   const [isListening, setIsListening] = useState(false)
   const [micPermission, setMicPermission] = useState<'checking' | 'granted' | 'needs-setup'>('checking')
@@ -27,102 +32,163 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   const [interimTranscript, setInterimTranscript] = useState('')
   const [segments, setSegments] = useState<VoiceSegment[]>([])
   const [error, setError] = useState<string | null>(null)
-  const tabReadyRef = useRef(false)
+  const recognitionRef = useRef<any>(null)
+  const captureStartRef = useRef(0)
+  const processedResultsRef = useRef(0)
 
-  // Ensure mic-permission tab is alive on mount
+  // Check mic permission on mount
   useEffect(() => {
-    async function ensureMicTab() {
+    async function checkPermission() {
+      // First check storage flag
       const hasFlag = await chrome.storage.local.get(MIC_GRANTED_KEY)
         .then(s => !!s[MIC_GRANTED_KEY])
         .catch(() => false)
 
-      // Ping the mic tab to see if it's alive
-      const tabAlive = await new Promise<boolean>(resolve => {
-        chrome.runtime.sendMessage({ type: 'MIC_TAB_PING' }, response => {
-          // If no tab is listening, Chrome sets lastError
-          if (chrome.runtime.lastError || !response?.alive) {
-            resolve(false)
-          } else {
-            resolve(true)
+      if (hasFlag) {
+        // Verify permission is still granted
+        try {
+          const permStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName })
+          if (permStatus.state === 'granted') {
+            setMicPermission('granted')
+            return
           }
-        })
-      })
-
-      if (tabAlive) {
-        // Tab is alive — we're good
-        tabReadyRef.current = true
-        setMicPermission(hasFlag ? 'granted' : 'needs-setup')
-        return
+        } catch {
+          // permissions.query not available — try getUserMedia
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+            stream.getTracks().forEach(t => t.stop())
+            setMicPermission('granted')
+            return
+          } catch {
+            // Permission revoked or not available
+          }
+        }
       }
 
-      // Tab is not alive — open it
-      // If permission was previously granted, the tab will auto-detect and hide the button
-      window.open(chrome.runtime.getURL('mic-permission.html'))
-      setMicPermission(hasFlag ? 'granted' : 'needs-setup')
+      setMicPermission('needs-setup')
     }
 
-    ensureMicTab()
+    checkPermission()
   }, [])
 
-  // Listen for messages from the mic-permission tab
+  // Listen for MIC_PERMISSION_GRANTED from the permission tab
   useEffect(() => {
     const listener = (message: any) => {
-      if (message.type === 'SPEECH_STARTED') {
-        setIsListening(true)
-      } else if (message.type === 'SPEECH_RESULT') {
-        if (message.segments && message.segments.length > 0) {
-          setSegments(prev => {
-            const updated = [...prev, ...message.segments]
-            setTranscript(updated.map((s: VoiceSegment) => s.text).join(' '))
-            return updated
-          })
-        }
-        if (message.interim !== undefined) {
-          setInterimTranscript(message.interim)
-        }
-      } else if (message.type === 'SPEECH_ERROR') {
-        setError(message.error)
-        setIsListening(false)
-      } else if (message.type === 'MIC_PERMISSION_GRANTED') {
+      if (message.type === 'MIC_PERMISSION_GRANTED') {
         setMicPermission('granted')
-      } else if (message.type === 'MIC_TAB_READY') {
-        tabReadyRef.current = true
       }
     }
-
     chrome.runtime.onMessage.addListener(listener)
     return () => chrome.runtime.onMessage.removeListener(listener)
   }, [])
 
-  const requestMicPermission = useCallback(() => {
+  const requestMicPermission = useCallback(async () => {
+    // Try getting permission directly in sidepanel first
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      stream.getTracks().forEach(t => t.stop())
+      chrome.storage.local.set({ [MIC_GRANTED_KEY]: true })
+      setMicPermission('granted')
+      return
+    } catch {
+      // Sidepanel can't show permission prompt — fall back to tab
+    }
     window.open(chrome.runtime.getURL('mic-permission.html'))
   }, [])
 
-  const start = useCallback(async (captureStartedAt: number) => {
+  const start = useCallback((captureStartedAt: number) => {
+    const SpeechRecognitionCtor = getSpeechRecognitionAPI()
+    if (!SpeechRecognitionCtor) {
+      setError('Speech recognition not available in this browser.')
+      return
+    }
+    if (micPermission !== 'granted') {
+      setError('Microphone not enabled. Click "Setup Microphone" first.')
+      return
+    }
+
     setTranscript('')
     setInterimTranscript('')
     setSegments([])
     setError(null)
+    captureStartRef.current = captureStartedAt
+    processedResultsRef.current = 0
 
-    if (micPermission !== 'granted') {
-      setError('Microphone not enabled. Grant permission in the PointDev tab first.')
-      return
+    const recognition = new SpeechRecognitionCtor()
+    recognition.continuous = true
+    recognition.interimResults = true
+    recognition.lang = navigator.language
+
+    recognition.onstart = () => {
+      setIsListening(true)
     }
 
-    chrome.runtime.sendMessage({
-      type: 'SPEECH_START',
-      captureStartedAt,
-    })
+    recognition.onresult = (event: any) => {
+      let interim = ''
+      const newSegments: VoiceSegment[] = []
+
+      for (let i = processedResultsRef.current; i < event.results.length; i++) {
+        const result = event.results[i]
+        if (result.isFinal) {
+          const text = result[0].transcript.trim()
+          if (text) {
+            const now = Date.now()
+            newSegments.push({
+              text,
+              startMs: now - captureStartRef.current - 1000,
+              endMs: now - captureStartRef.current,
+            })
+          }
+          processedResultsRef.current = i + 1
+        } else {
+          interim += result[0].transcript
+        }
+      }
+
+      if (newSegments.length > 0) {
+        setSegments(prev => {
+          const updated = [...prev, ...newSegments]
+          setTranscript(updated.map(s => s.text).join(' '))
+          return updated
+        })
+      }
+      setInterimTranscript(interim)
+    }
+
+    recognition.onerror = (event: any) => {
+      if (event.error === 'not-allowed') {
+        setError('Microphone access denied. Please grant permission and try again.')
+        setMicPermission('needs-setup')
+        chrome.storage.local.remove(MIC_GRANTED_KEY)
+      } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
+        setError('Speech error: ' + event.error)
+      }
+    }
+
+    recognition.onend = () => {
+      // Auto-restart for continuous recognition while ref is set
+      if (recognitionRef.current === recognition) {
+        try { recognition.start() } catch { /* already stopped */ }
+      }
+    }
+
+    recognitionRef.current = recognition
+    recognition.start()
   }, [micPermission])
 
   const stop = useCallback(() => {
-    chrome.runtime.sendMessage({ type: 'SPEECH_STOP' })
+    if (recognitionRef.current) {
+      const r = recognitionRef.current
+      recognitionRef.current = null
+      r.stop()
+    }
     setIsListening(false)
     setInterimTranscript('')
   }, [])
 
   return {
-    isAvailable: true, isListening, micPermission,
+    isAvailable: !!getSpeechRecognitionAPI(),
+    isListening, micPermission,
     transcript, interimTranscript, segments, error,
     requestMicPermission, start, stop,
   }
