@@ -263,7 +263,7 @@ function formatConsoleNetwork(session: CaptureSession): string {
   return lines.join('\n')
 }
 
-function formatTimestamp(ms: number): string {
+export function formatTimestamp(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000)
   const minutes = Math.floor(totalSeconds / 60)
   const seconds = totalSeconds % 60

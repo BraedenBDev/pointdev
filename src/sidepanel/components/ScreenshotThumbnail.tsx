@@ -1,16 +1,10 @@
 import { useState, useCallback } from 'react'
 import type { AnnotatedScreenshot } from '@shared/types'
+import { formatTimestamp } from '@shared/formatter'
 
 interface ScreenshotThumbnailProps {
   screenshot: AnnotatedScreenshot
   size: 'small' | 'large'
-}
-
-function formatTimestamp(ms: number): string {
-  const totalSeconds = Math.floor(ms / 1000)
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds % 60
-  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
 export function ScreenshotThumbnail({ screenshot, size }: ScreenshotThumbnailProps) {
@@ -26,16 +20,14 @@ export function ScreenshotThumbnail({ screenshot, size }: ScreenshotThumbnailPro
       await navigator.clipboard.write([
         new ClipboardItem({ 'image/png': blob }),
       ])
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
     } catch {
       // Fallback: copy description text
-      await navigator.clipboard.writeText(
-        screenshot.descriptionParts.join(' | ') + (screenshot.voiceContext ? ` — "${screenshot.voiceContext}"` : '')
-      )
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      const desc = screenshot.descriptionParts.join(' | ')
+      const voice = screenshot.voiceContext ? ` — "${screenshot.voiceContext}"` : ''
+      await navigator.clipboard.writeText(desc + voice)
     }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }, [screenshot])
 
   const desc = screenshot.descriptionParts.join(' | ')

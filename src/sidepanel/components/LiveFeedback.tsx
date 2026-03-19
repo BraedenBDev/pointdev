@@ -10,6 +10,15 @@ interface LiveFeedbackProps {
   captureStartedAt: number
 }
 
+function annotationIcon(type: string): string {
+  switch (type) {
+    case 'circle': return '\u25CB'
+    case 'arrow': return '\u2192'
+    case 'freehand': return '\u270E'
+    default: return '\u25A1'
+  }
+}
+
 export function LiveFeedback({ session, isListening, interimTranscript, transcript, captureStartedAt }: LiveFeedbackProps) {
   const [elapsed, setElapsed] = useState(0)
 
@@ -47,7 +56,7 @@ export function LiveFeedback({ session, isListening, interimTranscript, transcri
           <strong>Annotations:</strong> {session.annotations.length}
           {session.annotations.map((ann, i) => (
             <div key={i} className="annotation-item">
-              {ann.type === 'circle' ? '\u25CB' : ann.type === 'arrow' ? '\u2192' : ann.type === 'freehand' ? '\u270E' : '\u25A1'} {ann.nearestElement || 'element'}
+              {annotationIcon(ann.type)} {ann.nearestElement || 'element'}
             </div>
           ))}
         </div>

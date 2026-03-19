@@ -42,12 +42,12 @@ let highlightEl: HTMLElement | null = null
 
 // Screenshot dedup state
 let lastScreenshotTime = 0
-let lastScreenshotScroll = { x: 0, y: 0 }
+let lastScreenshotScroll = { scrollX: 0, scrollY: 0 }
 
 function requestScreenshot(annotationIndex?: number, selectedElementSelector?: string): void {
   const now = Date.now()
-  const currentScroll = { x: window.scrollX, y: window.scrollY }
-  const scrollChanged = currentScroll.x !== lastScreenshotScroll.x || currentScroll.y !== lastScreenshotScroll.y
+  const currentScroll = { scrollX: window.scrollX, scrollY: window.scrollY }
+  const scrollChanged = currentScroll.scrollX !== lastScreenshotScroll.scrollX || currentScroll.scrollY !== lastScreenshotScroll.scrollY
   const withinWindow = (now - lastScreenshotTime) < 2000 && lastScreenshotTime > 0
   const replacesPrevious = withinWindow && !scrollChanged
 
@@ -266,7 +266,7 @@ function startCapture() {
   isCapturing = true
   currentMode = 'select'
   lastScreenshotTime = 0
-  lastScreenshotScroll = { x: 0, y: 0 }
+  lastScreenshotScroll = { scrollX: 0, scrollY: 0 }
 
   overlay = new CanvasOverlay(document, window)
   overlay.setMode('select')

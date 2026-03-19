@@ -1,4 +1,4 @@
-import type { SelectedElementData, AnnotationData, CursorSampleData, VoiceSegment, CaptureSession, AnnotatedScreenshot, DeviceMetadata, ConsoleEntry, FailedRequest } from './types'
+import type { SelectedElementData, AnnotationData, CursorSampleData, VoiceSegment, CaptureSession, DeviceMetadata, ConsoleEntry, FailedRequest } from './types'
 
 export type Message =
   // Sidepanel → Service Worker

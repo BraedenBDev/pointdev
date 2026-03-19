@@ -178,7 +178,8 @@ export async function handleMessage(
             const ann = session.annotations[resolvedIndex]
             if (ann) {
               const target = ann.nearestElement || 'unknown element'
-              descParts.push(`${ann.type.charAt(0).toUpperCase() + ann.type.slice(1)} around ${target}`)
+              const label = ann.type.charAt(0).toUpperCase() + ann.type.slice(1)
+              descParts.push(`${label} around ${target}`)
             }
           }
         }
