@@ -127,12 +127,12 @@ function reconstructShorthand(styles: Record<string, string>, prop: string): str
 }
 
 function formatBoxModel(box: BoxModel): string {
-  const fmt = (sides: { top: number; right: number; bottom: number; left: number }) => {
+  function formatSides(sides: { top: number; right: number; bottom: number; left: number }): string {
     const { top, right, bottom, left } = sides
     if (top === right && right === bottom && bottom === left) return `${top}px`
-    return `${top} ${right} ${bottom} ${left}px`
+    return `${top}px ${right}px ${bottom}px ${left}px`
   }
-  return `${box.content.width}x${box.content.height} (padding: ${fmt(box.padding)}, border: ${fmt(box.border)}, margin: ${fmt(box.margin)})`
+  return `${box.content.width}x${box.content.height} (padding: ${formatSides(box.padding)}, border: ${formatSides(box.border)}, margin: ${formatSides(box.margin)})`
 }
 
 function truncateDom(html: string): string {
@@ -240,8 +240,8 @@ function formatConsoleNetwork(session: CaptureSession): string {
     lines.push('Errors:')
     for (const entry of session.consoleErrors) {
       const ts = formatTimestamp(entry.timestampMs)
-      const prefix = entry.level === 'warn' ? 'Warning' : ''
-      lines.push(`- [${ts}] ${prefix ? prefix + ': ' : ''}${entry.message}`)
+      const label = entry.level === 'warn' ? 'Warning: ' : ''
+      lines.push(`- [${ts}] ${label}${entry.message}`)
       if (entry.stack) {
         lines.push(`    ${entry.stack.split('\n')[0]}`)
       }

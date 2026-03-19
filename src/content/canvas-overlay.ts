@@ -122,7 +122,7 @@ export class CanvasOverlay {
       this.redraw()
 
       return {
-        type: 'circle' as const,
+        type: 'circle',
         coordinates: { centerX: cx + scrollX, centerY: cy + scrollY, radiusX: rx, radiusY: ry },
         timestampMs,
       }
@@ -142,7 +142,7 @@ export class CanvasOverlay {
       this.redraw()
 
       return {
-        type: 'arrow' as const,
+        type: 'arrow',
         coordinates: { startX: sx + scrollX, startY: sy + scrollY, endX: ex + scrollX, endY: ey + scrollY },
         timestampMs,
       }
@@ -162,7 +162,7 @@ export class CanvasOverlay {
       this.redraw()
 
       return {
-        type: 'rectangle' as const,
+        type: 'rectangle',
         coordinates: { x: x + scrollX, y: y + scrollY, width: w, height: h },
         timestampMs,
       }
@@ -188,7 +188,7 @@ export class CanvasOverlay {
     this.redraw()
 
     return {
-      type: 'freehand' as const,
+      type: 'freehand',
       coordinates: { points: pagePoints },
       timestampMs,
     }
@@ -271,7 +271,6 @@ export class CanvasOverlay {
   }
 
   private drawRect(x: number, y: number, w: number, h: number): void {
-    this.ctx.beginPath()
     this.ctx.strokeRect(x, y, w, h)
   }
 

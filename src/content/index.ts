@@ -5,7 +5,7 @@ import { extractElementData, findNearestElement, discoverCssVariables, getAncest
 import { inspectReactComponent } from './react-inspector'
 import { collectDeviceMetadata } from './device-metadata'
 import type { CaptureMode } from '@shared/messages'
-import type { AnnotationData } from '@shared/types'
+import type { AnnotationData, CircleCoords, ArrowCoords, FreehandCoords, RectangleCoords } from '@shared/types'
 
 // Use dynamic import of css-selector-generator to keep it tree-shakeable
 let generateSelector: ((el: Element) => string) | null = null
@@ -123,6 +123,29 @@ function handleMouseMove(e: MouseEvent) {
   }
 }
 
+function getAnnotationFocalPoint(annotation: AnnotationData): { x: number; y: number } {
+  switch (annotation.type) {
+    case 'circle': {
+      const c = annotation.coordinates as CircleCoords
+      return { x: c.centerX, y: c.centerY }
+    }
+    case 'arrow': {
+      const a = annotation.coordinates as ArrowCoords
+      return { x: a.endX, y: a.endY }
+    }
+    case 'freehand': {
+      const f = annotation.coordinates as FreehandCoords
+      const sumX = f.points.reduce((s, p) => s + p.x, 0)
+      const sumY = f.points.reduce((s, p) => s + p.y, 0)
+      return { x: sumX / f.points.length, y: sumY / f.points.length }
+    }
+    case 'rectangle': {
+      const r = annotation.coordinates as RectangleCoords
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 }
+    }
+  }
+}
+
 function handleMouseUp(e: MouseEvent) {
   if (!drawStart || !overlay) return
 
@@ -141,28 +164,10 @@ function handleMouseUp(e: MouseEvent) {
   drawStart = null
 
   if (annotation) {
-    // Resolve focal point for nearestElement
-    let viewportX: number, viewportY: number
-    const coords = annotation.coordinates as any
-
-    if (annotation.type === 'circle') {
-      viewportX = coords.centerX - window.scrollX
-      viewportY = coords.centerY - window.scrollY
-    } else if (annotation.type === 'arrow') {
-      viewportX = coords.endX - window.scrollX
-      viewportY = coords.endY - window.scrollY
-    } else if (annotation.type === 'freehand') {
-      // Centroid of all points
-      const pts = coords.points as Array<{ x: number; y: number }>
-      const cx = pts.reduce((s: number, p: { x: number }) => s + p.x, 0) / pts.length
-      const cy = pts.reduce((s: number, p: { y: number }) => s + p.y, 0) / pts.length
-      viewportX = cx - window.scrollX
-      viewportY = cy - window.scrollY
-    } else {
-      // Rectangle center
-      viewportX = coords.x + coords.width / 2 - window.scrollX
-      viewportY = coords.y + coords.height / 2 - window.scrollY
-    }
+    // Resolve focal point for nearestElement lookup (viewport-relative)
+    const focalPoint = getAnnotationFocalPoint(annotation)
+    const viewportX = focalPoint.x - window.scrollX
+    const viewportY = focalPoint.y - window.scrollY
 
     const nearestEl = findNearestElement(viewportX, viewportY, document)
     if (nearestEl && generateSelector) {
@@ -237,7 +242,7 @@ function startCapture() {
   })
   cursorTracker.start(captureStartedAt, document, window)
 
-  consoleCapture = new ConsoleNetworkCapture(captureStartedAt, (entries, requests) => {
+  consoleCapture = new ConsoleNetworkCapture((entries, requests) => {
     chrome.runtime.sendMessage({ type: 'CONSOLE_BATCH', data: { entries, requests } })
   })
   consoleCapture.start()

@@ -13,7 +13,7 @@ describe('ConsoleNetworkCapture', () => {
   it('attaches DOM event listener on start', () => {
     const addSpy = vi.spyOn(document, 'addEventListener')
     const onBatch = vi.fn()
-    const capture = new ConsoleNetworkCapture(Date.now(), onBatch)
+    const capture = new ConsoleNetworkCapture(onBatch)
     capture.start()
 
     expect(addSpy).toHaveBeenCalledWith('pointdev-console-batch', expect.any(Function))
@@ -24,7 +24,7 @@ describe('ConsoleNetworkCapture', () => {
   it('removes DOM event listener on stop', () => {
     const removeSpy = vi.spyOn(document, 'removeEventListener')
     const onBatch = vi.fn()
-    const capture = new ConsoleNetworkCapture(Date.now(), onBatch)
+    const capture = new ConsoleNetworkCapture(onBatch)
     capture.start()
     capture.stop()
 
@@ -34,7 +34,7 @@ describe('ConsoleNetworkCapture', () => {
 
   it('calls onBatch when receiving CustomEvent', () => {
     const onBatch = vi.fn()
-    const capture = new ConsoleNetworkCapture(Date.now(), onBatch)
+    const capture = new ConsoleNetworkCapture(onBatch)
     capture.start()
 
     const event = new CustomEvent('pointdev-console-batch', {

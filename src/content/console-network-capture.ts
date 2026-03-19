@@ -3,12 +3,10 @@ import type { ConsoleEntry, FailedRequest } from '@shared/types'
 type BatchCallback = (entries: ConsoleEntry[], requests: FailedRequest[]) => void
 
 export class ConsoleNetworkCapture {
-  private captureStartedAt: number
   private onBatch: BatchCallback
   private listener: ((e: Event) => void) | null = null
 
-  constructor(captureStartedAt: number, onBatch: BatchCallback) {
-    this.captureStartedAt = captureStartedAt
+  constructor(onBatch: BatchCallback) {
     this.onBatch = onBatch
   }
 
