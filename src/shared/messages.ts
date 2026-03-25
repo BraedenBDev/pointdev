@@ -1,4 +1,5 @@
-import type { SelectedElementData, AnnotationData, CursorSampleData, VoiceSegment, CaptureSession, DeviceMetadata, ConsoleEntry, FailedRequest } from './types'
+import type { SelectedElementData, AnnotationData, CursorSampleData, VoiceSegment, CaptureSession, DeviceMetadata, ConsoleEntry, FailedRequest, ScreenshotTrigger } from './types'
+export type { ScreenshotTrigger } from './types'
 
 export type Message =
   // Sidepanel → Service Worker
@@ -22,9 +23,26 @@ export type Message =
   | { type: 'CONSOLE_BATCH'; data: { entries: ConsoleEntry[]; requests: FailedRequest[] } }
   | { type: 'PONG' }
 
+  // Sidepanel → Service Worker (smart screenshots)
+  | { type: 'REQUEST_TAB_STREAM'; tabId: number }
+  | { type: 'SMART_SCREENSHOT_REQUEST'; data: SmartScreenshotSignals }
+
   // Service Worker → Sidepanel
   | { type: 'SESSION_UPDATED'; session: CaptureSession }
   | { type: 'CAPTURE_COMPLETE'; session: CaptureSession }
   | { type: 'CAPTURE_ERROR'; error: string }
+  | { type: 'TAB_STREAM_READY'; streamId: string }
+  | { type: 'DWELL_UPDATE'; data: { element: string; durationMs: number; active: boolean } }
 
 export type CaptureMode = 'select' | 'circle' | 'arrow' | 'freehand' | 'rectangle'
+
+export interface SmartScreenshotSignals {
+  trigger: ScreenshotTrigger
+  interestScore: number
+  frameDiffRatio?: number
+  dwellElement?: string
+  dwellDurationMs?: number
+  voiceSegment?: string
+  annotationIndex?: number
+  selectedElementSelector?: string
+}

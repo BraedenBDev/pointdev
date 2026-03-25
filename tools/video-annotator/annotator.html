@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Video Frame Annotator</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #0a0a0a; color: #e0e0e0;
+    display: flex; flex-direction: column; height: 100vh;
+  }
+
+  /* Top bar */
+  .toolbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 20px; background: #161616; border-bottom: 1px solid #2a2a2a;
+    flex-shrink: 0; flex-wrap: wrap;
+  }
+  .toolbar h1 { font-size: 16px; font-weight: 600; color: #fff; }
+  .toolbar button {
+    padding: 6px 14px; border-radius: 6px; border: 1px solid #333;
+    background: #1e1e1e; color: #e0e0e0; cursor: pointer; font-size: 13px;
+  }
+  .toolbar button:hover { background: #2a2a2a; }
+  .toolbar button.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+  .toolbar button.primary:hover { background: #1d4ed8; }
+  .toolbar button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .toolbar .spacer { flex: 1; }
+  .toolbar .count { font-size: 13px; color: #888; }
+  .toolbar input[type="file"] { display: none; }
+  .toolbar label.file-btn {
+    padding: 6px 14px; border-radius: 6px; border: 1px solid #333;
+    background: #1e1e1e; color: #e0e0e0; cursor: pointer; font-size: 13px;
+  }
+  .toolbar label.file-btn:hover { background: #2a2a2a; }
+
+  /* Interval control */
+  .interval-control {
+    display: flex; align-items: center; gap: 6px; font-size: 13px; color: #888;
+  }
+  .interval-control input[type="number"] {
+    width: 50px; padding: 4px 6px; border-radius: 4px; border: 1px solid #333;
+    background: #1e1e1e; color: #e0e0e0; font-size: 13px; text-align: center;
+  }
+  .interval-control input[type="number"]:focus { outline: none; border-color: #2563eb; }
+
+  /* Filter tabs */
+  .filter-bar {
+    display: flex; gap: 8px; padding: 8px 20px; background: #111; border-bottom: 1px solid #222;
+    flex-shrink: 0;
+  }
+  .filter-bar button {
+    padding: 4px 12px; border-radius: 4px; border: 1px solid transparent;
+    background: transparent; color: #888; cursor: pointer; font-size: 12px;
+  }
+  .filter-bar button.active { color: #fff; background: #2563eb; }
+  .filter-bar button:hover:not(.active) { color: #ccc; }
+
+  /* Main layout */
+  .main { display: flex; flex: 1; overflow: hidden; }
+
+  /* Frame grid */
+  .grid-panel {
+    flex: 1; overflow-y: auto; padding: 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px; align-content: start;
+  }
+  .frame-card {
+    position: relative; border-radius: 8px; overflow: hidden;
+    border: 2px solid transparent; cursor: pointer; transition: border-color 0.15s;
+    background: #1a1a1a;
+  }
+  .frame-card:hover { border-color: #444; }
+  .frame-card.selected { border-color: #f59e0b; }
+  .frame-card.annotated { border-color: #22c55e; }
+  .frame-card.selected.annotated { border-color: #22c55e; box-shadow: 0 0 0 2px #f59e0b; }
+  .frame-card img {
+    width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block;
+  }
+  .frame-card .label {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 4px 8px; background: rgba(0,0,0,0.7);
+    font-size: 11px; color: #aaa;
+    display: flex; justify-content: space-between;
+  }
+  .frame-card .badge {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: #22c55e; margin-left: 6px; vertical-align: middle;
+  }
+
+  /* Detail panel */
+  .detail-panel {
+    width: 380px; background: #141414; border-left: 1px solid #2a2a2a;
+    display: flex; flex-direction: column; flex-shrink: 0;
+  }
+  .detail-panel.empty {
+    display: flex; align-items: center; justify-content: center;
+    color: #555; font-size: 14px;
+  }
+  .detail-panel .preview {
+    width: 100%; aspect-ratio: 16/9; object-fit: contain; background: #000;
+  }
+  .detail-panel .detail-body { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+  .detail-panel .frame-name { font-size: 14px; font-weight: 600; color: #fff; }
+  .detail-panel textarea {
+    flex: 1; resize: none; border-radius: 6px; border: 1px solid #333;
+    background: #1e1e1e; color: #e0e0e0; padding: 10px; font-size: 13px;
+    font-family: inherit; min-height: 120px;
+  }
+  .detail-panel textarea::placeholder { color: #555; }
+  .detail-panel textarea:focus { outline: none; border-color: #2563eb; }
+  .detail-panel .detail-actions { display: flex; gap: 8px; }
+  .detail-panel .detail-actions button { flex: 1; }
+
+  /* Drop zone */
+  .drop-zone {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    flex: 1; gap: 16px; color: #555;
+    grid-column: 1 / -1;
+  }
+  .drop-zone.drag-over { background: rgba(37, 99, 235, 0.1); border-radius: 12px; }
+  .drop-zone p { font-size: 14px; }
+  .drop-zone .icon { font-size: 48px; }
+
+  /* Progress bar */
+  .progress-container {
+    grid-column: 1 / -1;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    padding: 40px 20px; color: #888;
+  }
+  .progress-bar-track {
+    width: 100%; max-width: 400px; height: 6px; background: #2a2a2a;
+    border-radius: 3px; overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%; background: #2563eb; border-radius: 3px;
+    transition: width 0.2s ease;
+  }
+  .progress-label { font-size: 13px; }
+  .progress-sub { font-size: 11px; color: #555; }
+
+  /* Export modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center; z-index: 100;
+  }
+  .modal-overlay.hidden { display: none; }
+  .modal {
+    background: #1a1a1a; border-radius: 12px; border: 1px solid #333;
+    width: 700px; max-height: 80vh; display: flex; flex-direction: column;
+  }
+  .modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; border-bottom: 1px solid #2a2a2a;
+  }
+  .modal-header h2 { font-size: 16px; color: #fff; }
+  .modal-header button { background: none; border: none; color: #888; font-size: 20px; cursor: pointer; }
+  .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+  .modal-body pre {
+    background: #111; border: 1px solid #2a2a2a; border-radius: 8px;
+    padding: 16px; font-size: 12px; white-space: pre-wrap; word-break: break-word;
+    color: #ccc; max-height: 50vh; overflow-y: auto;
+  }
+  .modal-footer {
+    padding: 12px 20px; border-top: 1px solid #2a2a2a;
+    display: flex; gap: 8px; justify-content: flex-end;
+  }
+
+  /* Keyboard hint */
+  .kbd { display: inline-block; padding: 1px 5px; border-radius: 3px; background: #2a2a2a; font-size: 11px; color: #999; margin-left: 4px; }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h1>Frame Annotator</h1>
+  <label class="file-btn">
+    Load Video
+    <input type="file" id="video-input" accept="video/*">
+  </label>
+  <label class="file-btn">
+    Load Images
+    <input type="file" id="file-input-flat" multiple accept="image/*">
+  </label>
+  <div class="interval-control">
+    <span>Every</span>
+    <input type="number" id="interval-input" value="2.5" min="0.5" max="30" step="0.5">
+    <span>sec</span>
+  </div>
+  <div class="spacer"></div>
+  <span class="count" id="status-count"></span>
+  <button id="download-selected-btn" onclick="downloadSelectedFrames()" disabled>Download Selected</button>
+  <button onclick="exportAnnotations()" class="primary">Export for Claude</button>
+</div>
+
+<div class="filter-bar">
+  <button class="active" data-filter="all">All</button>
+  <button data-filter="selected">Selected</button>
+  <button data-filter="annotated">Annotated</button>
+  <button data-filter="unannotated">Not annotated</button>
+</div>
+
+<div class="main">
+  <div class="grid-panel" id="grid">
+    <div class="drop-zone" id="drop-zone">
+      <div class="icon">&#127916;</div>
+      <p>Drop a video file here, or click "Load Video"</p>
+      <p style="font-size:12px; color:#444;">Frames will be extracted every 2.5 seconds automatically</p>
+    </div>
+  </div>
+
+  <div class="detail-panel empty" id="detail">
+    <span>Select a frame to annotate</span>
+  </div>
+</div>
+
+<!-- Hidden video + canvas for frame extraction -->
+<video id="extractor-video" style="display:none;" muted preload="auto"></video>
+<canvas id="extractor-canvas" style="display:none;"></canvas>
+
+<!-- Export modal -->
+<div class="modal-overlay hidden" id="export-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Exported Annotations</h2>
+      <button onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <pre id="export-content"></pre>
+    </div>
+    <div class="modal-footer">
+      <button onclick="copyExport()">Copy to Clipboard</button>
+      <button onclick="downloadExport()">Download .md</button>
+      <button onclick="closeModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// State
+let frames = []; // { name, url, blob, timestamp, selected, annotation }
+let activeIndex = -1;
+let currentFilter = 'all';
+let extracting = false;
+
+const grid = document.getElementById('grid');
+const detail = document.getElementById('detail');
+const statusCount = document.getElementById('status-count');
+const video = document.getElementById('extractor-video');
+const canvas = document.getElementById('extractor-canvas');
+const ctx = canvas.getContext('2d');
+
+// --- File loading ---
+document.getElementById('video-input').addEventListener('change', e => {
+  if (e.target.files[0]) extractFromVideo(e.target.files[0]);
+});
+document.getElementById('file-input-flat').addEventListener('change', e => loadImageFiles(e.target.files));
+
+// --- Drag & drop on grid ---
+grid.addEventListener('dragover', e => {
+  e.preventDefault();
+  const dz = document.getElementById('drop-zone');
+  if (dz) dz.classList.add('drag-over');
+});
+grid.addEventListener('dragleave', e => {
+  const dz = document.getElementById('drop-zone');
+  if (dz) dz.classList.remove('drag-over');
+});
+grid.addEventListener('drop', e => {
+  e.preventDefault();
+  const dz = document.getElementById('drop-zone');
+  if (dz) dz.classList.remove('drag-over');
+
+  const files = Array.from(e.dataTransfer.files);
+  const videoFile = files.find(f => f.type.startsWith('video/'));
+  if (videoFile) {
+    extractFromVideo(videoFile);
+    return;
+  }
+  const imageFiles = files.filter(f => f.type.startsWith('image/'));
+  if (imageFiles.length) loadImageFiles(imageFiles);
+});
+
+// --- Video frame extraction ---
+async function extractFromVideo(file) {
+  if (extracting) return;
+  extracting = true;
+
+  const interval = parseFloat(document.getElementById('interval-input').value) || 2.5;
+  const objectUrl = URL.createObjectURL(file);
+  video.src = objectUrl;
+
+  // Show progress
+  grid.innerHTML = `
+    <div class="progress-container">
+      <div class="icon" style="font-size:48px;">&#127916;</div>
+      <div class="progress-label">Loading video: ${file.name}</div>
+      <div class="progress-bar-track"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+      <div class="progress-sub" id="progress-text">Preparing...</div>
+    </div>
+  `;
+
+  await new Promise((resolve, reject) => {
+    video.onloadedmetadata = resolve;
+    video.onerror = () => reject(new Error('Could not load video'));
+  });
+
+  const duration = video.duration;
+  const totalFrames = Math.floor(duration / interval) + 1;
+  const progressFill = document.getElementById('progress-fill');
+  const progressText = document.getElementById('progress-text');
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  frames = [];
+  activeIndex = -1;
+
+  for (let i = 0; i < totalFrames; i++) {
+    const time = i * interval;
+    if (time > duration) break;
+
+    video.currentTime = time;
+    await new Promise(resolve => { video.onseeked = resolve; });
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+    const url = URL.createObjectURL(blob);
+
+    const mins = Math.floor(time / 60);
+    const secs = Math.floor(time % 60);
+    const name = `${String(mins).padStart(2,'0')}m${String(secs).padStart(2,'0')}s`;
+
+    frames.push({
+      name,
+      url,
+      blob,
+      timestamp: time,
+      selected: false,
+      annotation: ''
+    });
+
+    // Update progress
+    const pct = Math.round(((i + 1) / totalFrames) * 100);
+    progressFill.style.width = pct + '%';
+    progressText.textContent = `Extracted ${i + 1} of ${totalFrames} frames (${name})`;
+  }
+
+  URL.revokeObjectURL(objectUrl);
+  extracting = false;
+  renderGrid();
+  updateStatus();
+  showDetail(-1);
+}
+
+// --- Load pre-existing image files ---
+function loadImageFiles(fileList) {
+  const files = Array.from(fileList).filter(f => f.type.startsWith('image/'));
+  files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+
+  frames = files.map(f => ({
+    name: f.name,
+    url: URL.createObjectURL(f),
+    blob: f,
+    timestamp: null,
+    selected: false,
+    annotation: ''
+  }));
+
+  activeIndex = -1;
+  renderGrid();
+  updateStatus();
+  showDetail(-1);
+}
+
+// --- Rendering ---
+function renderGrid() {
+  grid.innerHTML = '';
+  const visible = frames.map((f, i) => ({ ...f, idx: i })).filter(f => {
+    if (currentFilter === 'selected') return f.selected;
+    if (currentFilter === 'annotated') return f.annotation.trim();
+    if (currentFilter === 'unannotated') return f.selected && !f.annotation.trim();
+    return true;
+  });
+
+  if (!frames.length) {
+    grid.innerHTML = `<div class="drop-zone" id="drop-zone">
+      <div class="icon">&#127916;</div>
+      <p>Drop a video file here, or click "Load Video"</p>
+      <p style="font-size:12px; color:#444;">Frames will be extracted automatically</p>
+    </div>`;
+    return;
+  }
+
+  for (const f of visible) {
+    const card = document.createElement('div');
+    card.className = 'frame-card' + (f.selected ? ' selected' : '') + (f.annotation.trim() ? ' annotated' : '');
+    card.dataset.idx = f.idx;
+
+    const timeLabel = f.timestamp != null
+      ? `${Math.floor(f.timestamp/60)}:${String(Math.floor(f.timestamp%60)).padStart(2,'0')}`
+      : '';
+
+    card.innerHTML = `
+      <img src="${f.url}" loading="lazy" alt="${f.name}">
+      <div class="label">
+        <span>${f.name}${timeLabel ? ' (' + timeLabel + ')' : ''}</span>
+        <span>${f.annotation.trim() ? '<span class="badge"></span>' : ''}</span>
+      </div>
+    `;
+    card.addEventListener('click', e => {
+      if (e.shiftKey) {
+        toggleSelect(f.idx);
+      } else {
+        showDetail(f.idx);
+      }
+    });
+    grid.appendChild(card);
+  }
+
+  document.getElementById('download-selected-btn').disabled = !frames.some(f => f.selected);
+}
+
+function toggleSelect(idx) {
+  frames[idx].selected = !frames[idx].selected;
+  renderGrid();
+  updateStatus();
+  if (activeIndex === idx) showDetail(idx);
+}
+
+function showDetail(idx) {
+  activeIndex = idx;
+  if (idx < 0 || idx >= frames.length) {
+    detail.className = 'detail-panel empty';
+    detail.innerHTML = '<span>Select a frame to annotate</span>';
+    return;
+  }
+
+  const f = frames[idx];
+  const timeLabel = f.timestamp != null
+    ? ` @ ${Math.floor(f.timestamp/60)}:${String(Math.floor(f.timestamp%60)).padStart(2,'0')}`
+    : '';
+
+  detail.className = 'detail-panel';
+  detail.innerHTML = `
+    <img class="preview" src="${f.url}" alt="${f.name}">
+    <div class="detail-body">
+      <div class="frame-name">${f.name}${timeLabel} <span style="color:#888; font-weight:400;">#${idx + 1} of ${frames.length}</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button onclick="toggleSelect(${idx})" style="padding:4px 12px;border-radius:4px;border:1px solid #333;background:${f.selected ? '#f59e0b' : '#1e1e1e'};color:${f.selected ? '#000' : '#e0e0e0'};cursor:pointer;font-size:12px;">
+          ${f.selected ? '&#9733; Selected' : '&#9734; Select'} <span class="kbd">S</span>
+        </button>
+        <button onclick="navigateFrame(-1)" style="padding:4px 10px;border-radius:4px;border:1px solid #333;background:#1e1e1e;color:#e0e0e0;cursor:pointer;">&larr; <span class="kbd">A</span></button>
+        <button onclick="navigateFrame(1)" style="padding:4px 10px;border-radius:4px;border:1px solid #333;background:#1e1e1e;color:#e0e0e0;cursor:pointer;">&rarr; <span class="kbd">D</span></button>
+      </div>
+      <textarea id="annotation-input" placeholder="What's wrong with this frame? Describe the issue..."
+        oninput="updateAnnotation(${idx}, this.value)">${escapeHtml(f.annotation)}</textarea>
+      <div class="detail-actions">
+        <button onclick="clearAnnotation(${idx})" style="padding:6px 14px;border-radius:6px;border:1px solid #333;background:#1e1e1e;color:#e0e0e0;cursor:pointer;font-size:13px;">Clear</button>
+      </div>
+    </div>
+  `;
+}
+
+function updateAnnotation(idx, text) {
+  frames[idx].annotation = text;
+  if (!frames[idx].selected && text.trim()) {
+    frames[idx].selected = true;
+  }
+  updateStatus();
+  const card = grid.querySelector(`[data-idx="${idx}"]`);
+  if (card) {
+    card.className = 'frame-card' + (frames[idx].selected ? ' selected' : '') + (text.trim() ? ' annotated' : '');
+  }
+  document.getElementById('download-selected-btn').disabled = !frames.some(f => f.selected);
+}
+
+function clearAnnotation(idx) {
+  frames[idx].annotation = '';
+  renderGrid();
+  updateStatus();
+  showDetail(idx);
+}
+
+function navigateFrame(dir) {
+  if (activeIndex < 0) return;
+  const next = activeIndex + dir;
+  if (next >= 0 && next < frames.length) {
+    showDetail(next);
+    const card = grid.querySelector(`[data-idx="${next}"]`);
+    if (card) card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+function updateStatus() {
+  const selected = frames.filter(f => f.selected).length;
+  const annotated = frames.filter(f => f.annotation.trim()).length;
+  statusCount.textContent = `${frames.length} frames | ${selected} selected | ${annotated} annotated`;
+}
+
+// --- Download selected frames as individual files ---
+function downloadSelectedFrames() {
+  const selected = frames.filter(f => f.selected);
+  if (!selected.length) return;
+
+  for (const f of selected) {
+    const a = document.createElement('a');
+    a.href = f.url;
+    a.download = f.name + '.jpg';
+    a.click();
+  }
+}
+
+// --- Keyboard shortcuts ---
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+  if (e.key === 'a' || e.key === 'ArrowLeft') navigateFrame(-1);
+  if (e.key === 'd' || e.key === 'ArrowRight') navigateFrame(1);
+  if (e.key === 's' || e.key === ' ') { e.preventDefault(); if (activeIndex >= 0) toggleSelect(activeIndex); }
+  if (e.key === 'e' && activeIndex >= 0) {
+    const ta = document.getElementById('annotation-input');
+    if (ta) ta.focus();
+  }
+});
+
+// --- Filter tabs ---
+document.querySelectorAll('.filter-bar button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-bar button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    renderGrid();
+  });
+});
+
+// --- Export ---
+function exportAnnotations() {
+  const annotated = frames.filter(f => f.selected || f.annotation.trim());
+  if (!annotated.length) {
+    alert('No frames selected or annotated yet.');
+    return;
+  }
+
+  let md = `# Video Frame Annotations\n\n`;
+  md += `**Total frames reviewed:** ${frames.length}\n`;
+  md += `**Frames with feedback:** ${annotated.length}\n\n`;
+  md += `---\n\n`;
+
+  for (const f of annotated) {
+    const timeLabel = f.timestamp != null
+      ? ` (${Math.floor(f.timestamp/60)}:${String(Math.floor(f.timestamp%60)).padStart(2,'0')})`
+      : '';
+    md += `## ${f.name}${timeLabel}\n\n`;
+    if (f.annotation.trim()) {
+      md += `**Issue:** ${f.annotation.trim()}\n\n`;
+    } else {
+      md += `*Selected but no annotation provided.*\n\n`;
+    }
+    md += `---\n\n`;
+  }
+
+  md += `\n*Attach the corresponding frame images (filenames above) alongside this text so Claude can see what you're describing.*\n`;
+
+  document.getElementById('export-content').textContent = md;
+  document.getElementById('export-modal').classList.remove('hidden');
+}
+
+function copyExport() {
+  const text = document.getElementById('export-content').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy to Clipboard', 1500);
+  });
+}
+
+function downloadExport() {
+  const text = document.getElementById('export-content').textContent;
+  const blob = new Blob([text], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'frame-annotations.md';
+  a.click();
+}
+
+function closeModal() {
+  document.getElementById('export-modal').classList.add('hidden');
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

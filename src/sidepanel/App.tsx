@@ -7,14 +7,16 @@ import { OutputView } from './components/OutputView'
 import './styles.css'
 
 export function App() {
-  const { state, session, error, startCapture, stopCapture, setMode, reset } = useCaptureSession()
+  const { state, session, error, startCapture, stopCapture, setMode, reset, setVoiceSignal } = useCaptureSession()
   const speech = useSpeechRecognition()
   const captureStartRef = useRef(0)
 
-  // Send transcript updates incrementally as segments arrive
+  // Send transcript updates and feed voice signal to screenshot intelligence
   const lastSegmentCountRef = useRef(0)
   useEffect(() => {
     if (state !== 'capturing') return
+
+    // New final segment → send to service worker + signal intelligence
     if (speech.segments.length > lastSegmentCountRef.current) {
       const newSegment = speech.segments[speech.segments.length - 1]
       chrome.runtime.sendMessage({
@@ -22,8 +24,13 @@ export function App() {
         data: { transcript: speech.transcript, segment: newSegment },
       })
       lastSegmentCountRef.current = speech.segments.length
+      setVoiceSignal(true, newSegment.text)
+      return
     }
-  }, [speech.segments, speech.transcript, state])
+
+    // Interim transcript → voice-active signal while user is speaking
+    setVoiceSignal(speech.interimTranscript.length > 0, speech.interimTranscript)
+  }, [speech.segments, speech.transcript, speech.interimTranscript, state, setVoiceSignal])
 
   const handleStart = async () => {
     captureStartRef.current = Date.now()

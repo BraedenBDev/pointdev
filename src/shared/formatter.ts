@@ -231,6 +231,17 @@ function formatScreenshots(session: CaptureSession): string {
     const desc = s.descriptionParts.join(' | ')
     const voice = s.voiceContext ? ` — "${s.voiceContext}"` : ''
     lines.push(`${i + 1}. [${ts}] ${desc}${voice}`)
+
+    // Smart screenshot signal detail
+    if (s.signals) {
+      const details: string[] = []
+      if (s.signals.frameDiffRatio != null) details.push(`visual change: ${Math.round(s.signals.frameDiffRatio * 100)}%`)
+      if (s.signals.dwellElement) details.push(`dwell: ${s.signals.dwellElement} (${((s.signals.dwellDurationMs || 0) / 1000).toFixed(1)}s)`)
+      if (s.signals.voiceSegment) details.push(`voice: "${s.signals.voiceSegment}"`)
+      if (details.length > 0) {
+        lines.push(`   Signals: ${details.join(', ')}${s.interestScore != null ? ` [score: ${s.interestScore}]` : ''}`)
+      }
+    }
   }
   return lines.join('\n')
 }

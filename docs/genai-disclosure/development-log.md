@@ -708,3 +708,78 @@ Voice, annotations, and cursor tracking all captured simultaneously on https://a
 - Tag v0.1.0 release
 - Attend NLnet open office March 25
 - Submit application after open office feedback
+
+---
+
+## Session 11 — 2026-03-25: Smart Screenshot Intelligence & Video Annotator Experiment
+
+**Model:** Claude Opus 4.6 (Anthropic, via Claude Code CLI)
+**Human lead:** Braeden Bihag
+**AI role:** Architecture design, implementation, code review
+
+### What happened
+
+1. **Video frame annotator experiment.** Built a standalone HTML tool (`tools/video-annotator/annotator.html`) that accepts a video file via drag-and-drop, extracts frames client-side using `<video>` + `<canvas>` + `toBlob()` at configurable intervals (default 2.5s), and provides a grid-based review UI for selecting and annotating problem frames. Exports structured markdown for pasting into Claude. This experiment informed the design of the smart screenshot system.
+
+2. **ScreenshotIntelligence module.** Designed and implemented a multi-signal screenshot capture system that replaces the broken event-triggered auto-screenshot. Instead of fixed-interval capture or annotation-triggered capture, screenshots are now taken based on a weighted interest score combining four signals:
+   - **Frame differencing (CV):** `tabCapture` MediaStream provides a continuous video feed of the active tab. A 160x90 low-res canvas samples every 2s and compares pixel data against the previous frame using sparse sampling (every 4th pixel). Weight: 0.30.
+   - **Cursor dwell:** Real-time dwell detection (800ms threshold, 30px radius) in the service worker sends `DWELL_UPDATE` messages to the sidepanel. Reuses `distance()` from `@shared/dwell`. Weight: 0.25.
+   - **Voice activity:** Web Speech API interim/final transcript state feeds a boolean signal. Weight: 0.35.
+   - **User annotations:** Bypass scoring entirely (score = 1.0), always capture.
+   - Interest threshold: 0.4 with 3-second cooldown between captures.
+
+3. **Removed broken auto-screenshot code.** The old `requestScreenshot()` in `src/content/index.ts` (event-triggered, compositor timing bug) was removed along with its dedup state and obsolete tests. The content script still sends `ANNOTATION_ADDED` and `ELEMENT_SELECTED` messages; the sidepanel intelligence module handles screenshot triggering.
+
+4. **Code quality review and fixes.** Ran a three-agent parallel review (reuse, quality, efficiency) and fixed:
+   - Extracted `buildAnnotationDesc()` and `findOverlappingVoice()` helpers to eliminate copy-pasted logic between `SCREENSHOT_REQUEST` and `SMART_SCREENSHOT_REQUEST` handlers
+   - Fixed module-level dwell state persisting across sessions (added `resetDwellDetector()` on start/stop)
+   - Fixed dwell detector only checking last sample in batch (now scans all samples)
+   - Unified duplicate `ScreenshotTrigger` type (defined once in `types.ts`, re-exported from `messages.ts`)
+   - Optimized frame differ: sparse pixel sampling (75% reduction), buffer reuse instead of allocation per frame
+   - Consolidated two voice-signal effects into one in `App.tsx`
+
+5. **Formatter and UI updates.** Updated `formatScreenshots()` to output signal details (visual change %, dwell element, voice quote, interest score). Updated `ScreenshotThumbnail` component with colored trigger badges and signal breakdown display.
+
+6. **Future phase noted.** Braeden proposed using Claude API to produce human-readable action plan summaries from capture sessions (not for Claude Code — for humans). Parked as future phase due to 0 opCost constraint.
+
+### Decisions and rationale
+
+| Decision | Made by | Rationale |
+|---|---|---|
+| Use `tabCapture` MediaStream for frame capture (option 3) | Braeden | Cleanest approach for continuous low-res sampling; worth the permission addition |
+| Frame interval 2-2.5s instead of 1s | Braeden | Every second is too aggressive; 2-3s matches natural browsing rhythm |
+| Voice gets highest non-annotation weight (0.35) | AI, accepted by Braeden | If the user is talking, they're describing something worth capturing |
+| Remove old screenshot code entirely | AI, confirmed by Braeden | Old code never worked; new intelligence module is a clean replacement |
+| Claude API integration is future phase | Braeden | 0 opCost constraint — everything stays client-side for now |
+| Sparse pixel sampling (every 4th pixel) | AI (code review) | 75% reduction in frame diff comparisons with negligible accuracy loss |
+
+### What was AI-generated vs. human-authored
+
+- **AI-generated:** ScreenshotIntelligence class, message types, service worker handlers, dwell detector, formatter updates, thumbnail component changes, video annotator tool, all test code
+- **Human-directed:** Architecture choice (tabCapture over alternatives), signal weights, interest threshold, 0 opCost constraint, decision to remove old screenshot code, future API phase scoping
+- **Human-originated:** The idea to use lightweight CV for screenshot intelligence, the multi-signal approach combining frame diff + cursor dwell + voice + annotations
+
+### Artifacts produced
+
+| Artifact | Path | Status |
+|---|---|---|
+| Video frame annotator (experiment) | `tools/video-annotator/annotator.html` | Complete, standalone |
+| Screenshot intelligence module | `src/sidepanel/screenshot-intelligence.ts` | Implemented |
+| Smart screenshot messages | `src/shared/messages.ts` (new types) | Implemented |
+| Extended screenshot types | `src/shared/types.ts` (`ScreenshotTrigger`, signal fields) | Implemented |
+| Service worker smart handlers | `src/background/message-handler.ts` | Implemented |
+| Sidepanel integration | `src/sidepanel/hooks/useCaptureSession.ts`, `src/sidepanel/App.tsx` | Implemented |
+| Formatter signal output | `src/shared/formatter.ts` | Updated |
+| Thumbnail trigger badges | `src/sidepanel/components/ScreenshotThumbnail.tsx` | Updated |
+| Content script cleanup | `src/content/index.ts` | Old screenshot code removed |
+| Intelligence tests | `tests/sidepanel/screenshot-intelligence.test.ts` | 14 tests passing |
+| Manifest update | `src/manifest.json` | `tabCapture` permission added |
+| Test suite | 784 tests across 98 files | All passing |
+
+### Next steps
+
+- Manual testing of smart screenshot pipeline in Chrome
+- Tune interest threshold and signal weights based on real usage
+- Issue #19 (screenshot at annotation timestamps) is now superseded by the intelligence module
+- Tag v0.1.0 release
+- NLnet submission

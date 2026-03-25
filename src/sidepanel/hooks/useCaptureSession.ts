@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { CaptureSession } from '@shared/types'
 import type { CaptureMode, Message } from '@shared/messages'
+import { ScreenshotIntelligence } from '../screenshot-intelligence'
 
 type CaptureState = 'idle' | 'preparing' | 'capturing' | 'complete' | 'error'
 
@@ -9,6 +10,7 @@ export function useCaptureSession() {
   const [session, setSession] = useState<CaptureSession | null>(null)
   const [error, setError] = useState<string | null>(null)
   const portRef = useRef<chrome.runtime.Port | null>(null)
+  const intelligenceRef = useRef<ScreenshotIntelligence | null>(null)
 
   useEffect(() => {
     const listener = (message: Message) => {
@@ -21,6 +23,13 @@ export function useCaptureSession() {
       } else if (message.type === 'CAPTURE_ERROR') {
         setError(message.error)
         setState('error')
+      } else if (message.type === 'DWELL_UPDATE') {
+        // Feed dwell signal to intelligence module
+        intelligenceRef.current?.setDwellActive(
+          message.data.active,
+          message.data.element,
+          message.data.durationMs
+        )
       } else {
         return false // Not handled — don't hold channel open
       }
@@ -45,13 +54,46 @@ export function useCaptureSession() {
     if (response?.type === 'CAPTURE_ERROR') {
       setError(response.error)
       setState('error')
-    } else if (response?.type === 'SESSION_UPDATED') {
+      return
+    }
+
+    if (response?.type === 'SESSION_UPDATED') {
       setSession(response.session)
       setState('capturing')
+
+      // Start screenshot intelligence with tabCapture
+      const tabId = response.session.tabId
+      try {
+        const streamResponse = await chrome.runtime.sendMessage({
+          type: 'REQUEST_TAB_STREAM',
+          tabId,
+        })
+        if (streamResponse?.type === 'TAB_STREAM_READY') {
+          const intelligence = new ScreenshotIntelligence((signals) => {
+            // When an interesting frame is detected, request a full-res capture
+            chrome.runtime.sendMessage({
+              type: 'SMART_SCREENSHOT_REQUEST',
+              data: signals,
+            })
+          })
+          await intelligence.start(streamResponse.streamId, response.session.startedAt)
+          intelligenceRef.current = intelligence
+          console.log('[PointDev] ScreenshotIntelligence started')
+        }
+      } catch (err) {
+        // tabCapture failed — continue without smart screenshots
+        console.warn('[PointDev] Smart screenshots unavailable:', err)
+      }
     }
   }, [])
 
   const stopCapture = useCallback(async () => {
+    // Stop intelligence before ending capture
+    if (intelligenceRef.current) {
+      intelligenceRef.current.stop()
+      intelligenceRef.current = null
+    }
+
     const response = await chrome.runtime.sendMessage({ type: 'STOP_CAPTURE' })
     if (response?.type === 'CAPTURE_COMPLETE') {
       setSession(response.session)
@@ -71,5 +113,10 @@ export function useCaptureSession() {
     setError(null)
   }, [])
 
-  return { state, session, error, startCapture, stopCapture, setMode, reset }
+  // Expose intelligence ref so voice hook can feed signals
+  const setVoiceSignal = useCallback((active: boolean, segment?: string) => {
+    intelligenceRef.current?.setVoiceActive(active, segment)
+  }, [])
+
+  return { state, session, error, startCapture, stopCapture, setMode, reset, setVoiceSignal }
 }

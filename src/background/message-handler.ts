@@ -1,5 +1,43 @@
 import type { Message } from '@shared/messages'
+import type { AnnotationData, CursorSampleData, VoiceSegment } from '@shared/types'
+import { distance } from '@shared/dwell'
 import type { SessionStore } from './session-store'
+
+/** Resolve annotation index and build description parts for a screenshot. */
+function buildAnnotationDesc(
+  annotations: AnnotationData[],
+  annotationIndex: number | undefined,
+  selectedElementSelector: string | undefined,
+): { annotationIndices: number[]; descParts: string[] } {
+  const annotationIndices: number[] = []
+  const descParts: string[] = []
+
+  if (annotationIndex != null) {
+    const resolved = annotationIndex === -1 ? annotations.length - 1 : annotationIndex
+    if (resolved >= 0 && resolved < annotations.length) {
+      annotationIndices.push(resolved)
+      const ann = annotations[resolved]
+      if (ann) {
+        const label = ann.type.charAt(0).toUpperCase() + ann.type.slice(1)
+        descParts.push(`${label} around ${ann.nearestElement || 'unknown element'}`)
+      }
+    }
+  }
+
+  if (selectedElementSelector) {
+    descParts.push(`Selected ${selectedElementSelector}`)
+  }
+
+  return { annotationIndices, descParts }
+}
+
+/** Find voice segments overlapping a ±2s window around a timestamp. */
+function findOverlappingVoice(segments: VoiceSegment[], timestampMs: number): string | undefined {
+  const overlapping = segments.filter(seg =>
+    seg.startMs <= timestampMs + 2000 && seg.endMs >= timestampMs - 2000
+  )
+  return overlapping.length > 0 ? overlapping.map(s => s.text).join(' ') : undefined
+}
 
 export async function handleMessage(
   message: Message,
@@ -63,6 +101,9 @@ export async function handleMessage(
         pageInfo?.viewport || { width: fullTab.width || 1200, height: fullTab.height || 800 }
       )
 
+      // Reset dwell detector for new session
+      resetDwellDetector()
+
       // Inject console/network capture into the page's main world
       try {
         await chrome.scripting.executeScript({
@@ -118,15 +159,16 @@ export async function handleMessage(
       // Remove overlay from the page (content script may already be gone)
       await chrome.tabs.sendMessage(session.tabId, { type: 'REMOVE_CAPTURE' }).catch(() => {})
 
+      resetDwellDetector()
       const finalSession = store.endSession()!
       console.log('[PointDev] CAPTURE_COMPLETE: screenshots=', finalSession.screenshots.length, 'annotations=', finalSession.annotations.length)
       return { type: 'CAPTURE_COMPLETE', session: finalSession }
     }
 
     case 'SET_MODE': {
-      const s = store.getSession()
-      if (s) {
-        await chrome.tabs.sendMessage(s.tabId, { type: 'MODE_CHANGED', mode: message.mode }).catch(() => {})
+      const session = store.getSession()
+      if (session) {
+        await chrome.tabs.sendMessage(session.tabId, { type: 'MODE_CHANGED', mode: message.mode }).catch(() => {})
       }
       return undefined
     }
@@ -151,6 +193,16 @@ export async function handleMessage(
 
     case 'CURSOR_BATCH': {
       store.addCursorBatch(message.data)
+
+      if (store.getSession()) {
+        const dwellUpdate = detectRealtimeDwell(message.data)
+        if (dwellUpdate) {
+          chrome.runtime.sendMessage({
+            type: 'DWELL_UPDATE',
+            data: dwellUpdate,
+          }).catch(() => {})
+        }
+      }
       return undefined
     }
 
@@ -172,38 +224,13 @@ export async function handleMessage(
         console.log('[PointDev] SCREENSHOT_REQUEST: captured', dataUrl.length, 'chars')
         const { timestampMs, viewport, annotationIndex, selectedElementSelector, replacesPrevious } = message.data
 
-        // Build description parts
-        const annotationIndices: number[] = []
-        const descParts: string[] = []
+        const { annotationIndices, descParts } = buildAnnotationDesc(
+          session.annotations, annotationIndex, selectedElementSelector
+        )
 
-        if (annotationIndex != null) {
-          // -1 sentinel means "the annotation that was just added"
-          const resolvedIndex = annotationIndex === -1 ? session.annotations.length - 1 : annotationIndex
-          if (resolvedIndex >= 0 && resolvedIndex < session.annotations.length) {
-            annotationIndices.push(resolvedIndex)
-            const ann = session.annotations[resolvedIndex]
-            if (ann) {
-              const target = ann.nearestElement || 'unknown element'
-              const label = ann.type.charAt(0).toUpperCase() + ann.type.slice(1)
-              descParts.push(`${label} around ${target}`)
-            }
-          }
-        }
-
-        if (selectedElementSelector) {
-          descParts.push(`Selected ${selectedElementSelector}`)
-        }
-
-        // Find overlapping voice context (±2s window, join multiple segments)
-        let voiceContext: string | undefined
-        if (session.voiceRecording) {
-          const overlapping = session.voiceRecording.segments.filter(seg =>
-            seg.startMs <= timestampMs + 2000 && seg.endMs >= timestampMs - 2000
-          )
-          if (overlapping.length > 0) {
-            voiceContext = overlapping.map(s => s.text).join(' ')
-          }
-        }
+        const voiceContext = session.voiceRecording
+          ? findOverlappingVoice(session.voiceRecording.segments, timestampMs)
+          : undefined
 
         const screenshot = {
           dataUrl,
@@ -228,6 +255,61 @@ export async function handleMessage(
       }
     }
 
+    case 'REQUEST_TAB_STREAM': {
+      try {
+        const streamId = await (chrome.tabCapture as any).getMediaStreamId({
+          targetTabId: message.tabId,
+        })
+        return { type: 'TAB_STREAM_READY', streamId }
+      } catch (err) {
+        console.error('[PointDev] tabCapture.getMediaStreamId failed:', err)
+        return undefined
+      }
+    }
+
+    case 'SMART_SCREENSHOT_REQUEST': {
+      const session = store.getSession()
+      if (!session) return undefined
+
+      try {
+        const dataUrl = await chrome.tabs.captureVisibleTab()
+        const { trigger, interestScore, frameDiffRatio, dwellElement, dwellDurationMs, voiceSegment, annotationIndex, selectedElementSelector } = message.data
+        const timestampMs = Date.now() - session.startedAt
+
+        const { annotationIndices, descParts } = buildAnnotationDesc(
+          session.annotations, annotationIndex, selectedElementSelector
+        )
+
+        // Describe why this was captured
+        if (trigger === 'frame-diff') descParts.push('Visual change detected')
+        if (trigger === 'voice') descParts.push('Voice narration active')
+        if (trigger === 'dwell' && dwellElement) descParts.push(`Dwell on ${dwellElement}`)
+        if (trigger === 'multi') descParts.push('Multiple signals')
+
+        const voiceContext = voiceSegment
+          || (session.voiceRecording ? findOverlappingVoice(session.voiceRecording.segments, timestampMs) : undefined)
+
+        const screenshot = {
+          dataUrl,
+          timestampMs,
+          viewport: { scrollX: 0, scrollY: 0 },
+          annotationIndices,
+          descriptionParts: descParts.length > 0 ? descParts : ['Auto-captured'],
+          voiceContext,
+          trigger,
+          interestScore,
+          signals: { frameDiffRatio, dwellElement, dwellDurationMs, voiceSegment },
+        }
+
+        store.addAnnotatedScreenshot(screenshot)
+        const updated = store.getSession()
+        return updated ? { type: 'SESSION_UPDATED', session: updated } : undefined
+      } catch (err) {
+        console.error('[PointDev] SMART_SCREENSHOT_REQUEST failed:', err)
+        return undefined
+      }
+    }
+
     case 'CONSOLE_BATCH': {
       store.addConsoleBatch(message.data.entries, message.data.requests)
       return undefined
@@ -236,4 +318,57 @@ export async function handleMessage(
     default:
       return undefined
   }
+}
+
+// --- Real-time dwell detection ---
+// Uses a lower threshold (800ms) than full dwell analysis (1000ms) for early signaling.
+const DWELL_EARLY_MS = 800
+let dwellAnchor: { x: number; y: number; startMs: number; element?: string } | null = null
+let lastDwellActive = false
+
+function resetDwellDetector(): void {
+  dwellAnchor = null
+  lastDwellActive = false
+}
+
+function detectRealtimeDwell(
+  samples: CursorSampleData[]
+): { element: string; durationMs: number; active: boolean } | null {
+  if (!samples.length) return null
+
+  // Scan all samples in the batch to catch motion + stop within a single batch
+  let result: { element: string; durationMs: number; active: boolean } | null = null
+
+  for (const sample of samples) {
+    if (!dwellAnchor) {
+      dwellAnchor = { x: sample.x, y: sample.y, startMs: sample.timestampMs, element: sample.nearestElement }
+      continue
+    }
+
+    const dist = distance(
+      { x: sample.x, y: sample.y, timestampMs: sample.timestampMs },
+      { x: dwellAnchor.x, y: dwellAnchor.y, timestampMs: dwellAnchor.startMs }
+    )
+
+    if (dist > 30) {
+      // Cursor moved away — reset anchor, end any active dwell
+      dwellAnchor = { x: sample.x, y: sample.y, startMs: sample.timestampMs, element: sample.nearestElement }
+      if (lastDwellActive) {
+        lastDwellActive = false
+        result = { element: '', durationMs: 0, active: false }
+      }
+      continue
+    }
+
+    const elapsed = sample.timestampMs - dwellAnchor.startMs
+    if (elapsed >= DWELL_EARLY_MS && !lastDwellActive) {
+      lastDwellActive = true
+      result = { element: dwellAnchor.element || '', durationMs: elapsed, active: true }
+    } else if (elapsed >= DWELL_EARLY_MS && lastDwellActive) {
+      // Update duration for ongoing dwell
+      result = { element: dwellAnchor.element || '', durationMs: elapsed, active: true }
+    }
+  }
+
+  return result
 }

@@ -3,7 +3,7 @@
   "name": "PointDev",
   "version": "0.1.0",
   "description": "Structured browser context capture for AI-assisted development",
-  "permissions": ["activeTab", "scripting", "sidePanel", "storage"],
+  "permissions": ["activeTab", "scripting", "sidePanel", "storage", "tabCapture"],
   "side_panel": {
     "default_path": "src/sidepanel/index.html"
   },

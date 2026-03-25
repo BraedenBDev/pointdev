@@ -33,6 +33,8 @@ export interface CaptureSession {
   failedRequests: FailedRequest[]
 }
 
+export type ScreenshotTrigger = 'frame-diff' | 'dwell' | 'voice' | 'annotation' | 'multi'
+
 export interface AnnotatedScreenshot {
   dataUrl: string
   timestampMs: number
@@ -40,6 +42,14 @@ export interface AnnotatedScreenshot {
   annotationIndices: number[]
   descriptionParts: string[]
   voiceContext?: string
+  trigger?: ScreenshotTrigger
+  interestScore?: number
+  signals?: {
+    frameDiffRatio?: number
+    dwellElement?: string
+    dwellDurationMs?: number
+    voiceSegment?: string
+  }
 }
 
 export interface BoxModel {

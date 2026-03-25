@@ -7,6 +7,17 @@ interface ScreenshotThumbnailProps {
   size: 'small' | 'large'
 }
 
+function triggerColor(trigger: string): string {
+  switch (trigger) {
+    case 'voice': return '#8b5cf6'
+    case 'frame-diff': return '#3b82f6'
+    case 'dwell': return '#f59e0b'
+    case 'annotation': return '#22c55e'
+    case 'multi': return '#ec4899'
+    default: return '#6b7280'
+  }
+}
+
 export function ScreenshotThumbnail({ screenshot, size }: ScreenshotThumbnailProps) {
   const [copied, setCopied] = useState(false)
   const width = size === 'small' ? 120 : 240
@@ -47,11 +58,27 @@ export function ScreenshotThumbnail({ screenshot, size }: ScreenshotThumbnailPro
         </div>
       )}
       <div style={{ fontSize: 11, marginTop: 4 }}>
-        <span style={{ color: 'var(--muted)' }}>[{ts}]</span> {desc}
+        <span style={{ color: 'var(--muted)' }}>[{ts}]</span>
+        {screenshot.trigger && (
+          <span style={{
+            marginLeft: 4, padding: '1px 5px', borderRadius: 3, fontSize: 10,
+            background: triggerColor(screenshot.trigger), color: '#fff',
+          }}>
+            {screenshot.trigger}
+          </span>
+        )}
+        {' '}{desc}
       </div>
       {screenshot.voiceContext && (
         <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--muted)' }}>
           "{screenshot.voiceContext}"
+        </div>
+      )}
+      {screenshot.signals && size === 'large' && (
+        <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>
+          {screenshot.signals.frameDiffRatio != null && `${Math.round(screenshot.signals.frameDiffRatio * 100)}% visual change`}
+          {screenshot.signals.dwellElement && ` | dwell: ${screenshot.signals.dwellElement}`}
+          {screenshot.interestScore != null && ` | score: ${screenshot.interestScore}`}
         </div>
       )}
       {size === 'large' && (
