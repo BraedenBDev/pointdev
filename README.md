@@ -34,7 +34,7 @@ PointDev captures technical context (element selector, DOM subtree, computed sty
 - **Talk, draw, click** all at the same time during a single capture session
 - **Five annotation tools** — circle, arrow, freehand, rectangle, and element selection
 - **Temporal correlation** links what you're pointing at with what you're saying
-- **Annotated screenshots** auto-captured with intent descriptions and voice context
+- **Smart screenshots** auto-captured when you talk, dwell, or scroll — powered by real-time frame differencing
 - **Console + network capture** catches errors and failed requests alongside your feedback
 - **Works on any web page**, with opportunistic React component detection
 - **Copy and paste** the structured output into any AI coding tool
@@ -105,8 +105,8 @@ bun build
 1. Open `chrome://extensions/`, enable **Developer Mode**
 2. Click **Load unpacked** and select the `dist/` folder
 3. Open any web page, click the PointDev icon to open the sidepanel
-4. Click the PointDev icon to open the sidepanel
-5. Click **Setup Microphone** if you want voice narration (one-time, tab auto-closes)
+4. Click **Setup Microphone** if you want voice narration (one-time, tab auto-closes)
+5. Chrome will prompt to approve the **tab capture** permission on first use
 
 ---
 
@@ -120,22 +120,29 @@ flowchart LR
     end
     subgraph Extension
         SP[Sidepanel<br/>React UI + Speech]
-        SW[Service Worker<br/>State + Screenshots]
+        SI[Screenshot<br/>Intelligence]
+        SW[Service Worker<br/>State + Capture]
     end
 
     SP -- START_CAPTURE --> SW
     SW -- INJECT_CAPTURE --> CS
-    CS -- element, annotation,<br/>cursor, screenshot --> SW
+    SW -- TAB_STREAM_READY --> SI
+    CS -- element, annotation,<br/>cursor --> SW
     MW -- CustomEvent --> CS
     CS -- CONSOLE_BATCH --> SW
+    SW -- DWELL_UPDATE --> SI
+    SP -. voice signal .-> SI
+    SI -- SMART_SCREENSHOT --> SW
     SW -- SESSION_UPDATED --> SP
 ```
 
 **Sidepanel (React):** Capture controls, live feedback, voice transcription (Web Speech API runs here directly), screenshot thumbnails with copy-to-clipboard, compiled output display.
 
-**Service Worker:** Coordinates state between sidepanel and content script. Holds the `CaptureSession`, routes messages, captures annotated screenshots via `captureVisibleTab`, injects main-world console/network capture script.
+**Service Worker:** Coordinates state between sidepanel and content script. Holds the `CaptureSession`, routes messages, captures full-resolution screenshots via `captureVisibleTab`, provides `tabCapture` stream IDs for the intelligence module, runs real-time dwell detection, injects main-world console/network capture script.
 
-**Content Script:** Injected into the active page. Handles element selection (with Alt+scroll ancestry cycling), canvas annotation overlay (circle, arrow, freehand, rectangle), cursor tracking, React component detection, CSS variable discovery, and screenshot dedup logic.
+**Content Script:** Injected into the active page. Handles element selection (with Alt+scroll ancestry cycling), canvas annotation overlay (circle, arrow, freehand, rectangle), cursor tracking, React component detection, and CSS variable discovery.
+
+**Screenshot Intelligence (Sidepanel):** Receives a `tabCapture` MediaStream and samples low-res frames (160x90) every 2 seconds. Compares frames via sparse pixel differencing and combines the result with cursor dwell and voice activity signals to produce a weighted interest score. Screenshots are only captured when the score exceeds a threshold, avoiding noise while catching meaningful moments.
 
 **Main World Script:** Injected into the page's JavaScript world via `chrome.scripting.executeScript({ world: 'MAIN' })`. Monkey-patches `console.error/warn`, `fetch`, and `XMLHttpRequest` to capture errors and failed requests. Bridges data back to the content script via `CustomEvent`.
 
@@ -156,7 +163,7 @@ All capture data flows into a single `CaptureSession` object with timestamps rel
 | Console errors + network failures | Captures `console.error/warn`, failed fetch/XHR, uncaught exceptions, unhandled rejections |
 | Page + device metadata | URL, title, viewport, browser, OS, screen size, pixel ratio, touch, color scheme |
 | Cursor dwell tracking | Records which elements you hover over and for how long |
-| Annotated screenshots | Auto-captured on annotation/selection with descriptions and voice context |
+| Smart screenshots | Auto-captured by multi-signal intelligence: frame diff (CV), cursor dwell, voice activity, annotations |
 
 **Human context (your input):**
 
@@ -180,7 +187,7 @@ All capture data flows into a single `CaptureSession` object with timestamps rel
 | Runtime | Bun |
 | Canvas | HTML5 Canvas API (annotation overlay) |
 | Voice | Web Speech API |
-| Testing | Vitest (775 tests) |
+| Testing | Vitest (784 tests) |
 
 ---
 
@@ -194,7 +201,7 @@ pointdev/
 │   │                       # React inspector, device metadata, console/network capture
 │   ├── shared/             # Types, message definitions, template formatter,
 │   │                       # dwell computation
-│   └── sidepanel/          # React UI: App, hooks, components (incl. ScreenshotThumbnail)
+│   └── sidepanel/          # React UI: App, hooks, components, screenshot intelligence
 ├── public/                 # Mic-permission page, icons
 ├── tests/                  # Vitest unit tests (mirrors src/ structure)
 ├── docs/
@@ -218,8 +225,9 @@ PointDev requests minimal Chrome permissions:
 | `scripting` | Inject content script + main-world console/network capture |
 | `sidePanel` | The extension UI |
 | `storage` | Persist capture session and mic permission state |
+| `tabCapture` | Low-res video stream of the active tab for smart screenshot frame differencing |
 
-No background access to your browsing. No host permissions. No data leaves your machine except Web Speech API audio, which Chrome sends to Google for transcription. Local speech-to-text is on the [roadmap](#roadmap).
+No background access to your browsing. No host permissions. No data leaves your machine except Web Speech API audio, which Chrome sends to Google for transcription. Tab video data stays local and is never stored — only used for real-time frame comparison. Local speech-to-text is on the [roadmap](#roadmap).
 
 ---
 
@@ -233,11 +241,10 @@ No background access to your browsing. No host permissions. No data leaves your 
 - [x] Voice transcription with timestamped segments (sidepanel-native)
 - [x] Cursor dwell tracking with temporal correlation
 - [x] Device metadata capture
-- [x] Annotated screenshots with dedup, descriptions, and voice context
+- [x] Smart screenshots via multi-signal intelligence (frame diff + dwell + voice + annotations)
 - [x] Console errors + failed network request capture (main-world injection)
 - [x] Compiled structured output with copy-to-clipboard
 - [ ] Source file path resolution from selectors ([#20](https://github.com/BraedenBDev/pointdev/issues/20))
-- [ ] Screenshot at each annotation timestamp ([#19](https://github.com/BraedenBDev/pointdev/issues/19))
 - [ ] Tab video recording for session replay
 - [ ] Accessibility capture (ARIA roles, names) ([#23](https://github.com/BraedenBDev/pointdev/issues/23))
 - [ ] Multi-element selection ([#13](https://github.com/BraedenBDev/pointdev/issues/13))
