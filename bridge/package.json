@@ -1,0 +1,23 @@
+{
+  "name": "@pointdev/bridge",
+  "version": "0.1.0",
+  "description": "PointDev bridge server — connects the Chrome extension to AI coding tools via MCP",
+  "type": "module",
+  "bin": {
+    "pointdev-bridge": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.13",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.3"
+  }
+}
