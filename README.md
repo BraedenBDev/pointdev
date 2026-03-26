@@ -69,6 +69,14 @@ This is actual output from PointDev, captured on a live site:
 - [00:07-00:32] Dwelled 25.5s over h1.font-display.text-hero (during: "main hero")
 - [00:25-00:32] Dwelled 7.3s over div.absolute.bottom-10 (during: "scroll CTA")
 - [00:29-00:36] Dwelled 6.2s over div.absolute.bottom-10 (during: "overlapping with the")
+
+## Screenshots
+1. [00:10] Multiple signals — "the green is not working for me"
+   Signals: visual change: 16%, dwell: span.text-[var(--green)] (1.4s), voice: "the green is not working for me" [score: 0.7]
+2. [00:18] Multiple signals — "I think these images need to be a lot larger"
+   Signals: visual change: 0%, voice: "I think these images need to be a lot larger" [score: 0.6]
+3. [00:23] Circle around .cta-button — "and this button doesn't do anything"
+   Signals: voice: "and this button doesn't do anything" [score: 1.00]
 ```
 
 ### What an AI Agent Does With This
@@ -106,7 +114,7 @@ bun build
 2. Click **Load unpacked** and select the `dist/` folder
 3. Open any web page, click the PointDev icon to open the sidepanel
 4. Click **Setup Microphone** if you want voice narration (one-time, tab auto-closes)
-5. Chrome will prompt to approve the **tab capture** permission on first use
+5. Chrome will prompt to approve host permissions on first use (needed for smart screenshots)
 
 ---
 
@@ -126,10 +134,10 @@ flowchart LR
 
     SP -- START_CAPTURE --> SW
     SW -- INJECT_CAPTURE --> CS
-    SW -- TAB_STREAM_READY --> SI
     CS -- element, annotation,<br/>cursor --> SW
     MW -- CustomEvent --> CS
     CS -- CONSOLE_BATCH --> SW
+    SI -- SNAPSHOT_REQUEST --> SW
     SW -- DWELL_UPDATE --> SI
     SP -. voice signal .-> SI
     SI -- SMART_SCREENSHOT --> SW
@@ -138,11 +146,11 @@ flowchart LR
 
 **Sidepanel (React):** Capture controls, live feedback, voice transcription (Web Speech API runs here directly), screenshot thumbnails with copy-to-clipboard, compiled output display.
 
-**Service Worker:** Coordinates state between sidepanel and content script. Holds the `CaptureSession`, routes messages, captures full-resolution screenshots via `captureVisibleTab`, provides `tabCapture` stream IDs for the intelligence module, runs real-time dwell detection, injects main-world console/network capture script.
+**Service Worker:** Coordinates state between sidepanel and content script. Holds the `CaptureSession`, routes messages, captures screenshots via `captureVisibleTab` (both full-resolution for storage and low-quality JPEG for frame differencing), runs real-time dwell detection, injects main-world console/network capture script.
 
 **Content Script:** Injected into the active page. Handles element selection (with Alt+scroll ancestry cycling), canvas annotation overlay (circle, arrow, freehand, rectangle), cursor tracking, React component detection, and CSS variable discovery.
 
-**Screenshot Intelligence (Sidepanel):** Receives a `tabCapture` MediaStream and samples low-res frames (160x90) every 2 seconds. Compares frames via sparse pixel differencing and combines the result with cursor dwell and voice activity signals to produce a weighted interest score. Screenshots are only captured when the score exceeds a threshold, avoiding noise while catching meaningful moments.
+**Screenshot Intelligence (Sidepanel):** Requests low-quality JPEG snapshots from the service worker every 2 seconds and compares them at 160x90 resolution via sparse pixel differencing. Combines frame diff results with cursor dwell and voice activity signals to produce a weighted interest score. Screenshots are captured when the score exceeds a threshold, and always on annotations (with a render delay so the canvas overlay is visible). Voice context is retained for 5 seconds after speech ends to ensure nearby captures carry relevant narration.
 
 **Main World Script:** Injected into the page's JavaScript world via `chrome.scripting.executeScript({ world: 'MAIN' })`. Monkey-patches `console.error/warn`, `fetch`, and `XMLHttpRequest` to capture errors and failed requests. Bridges data back to the content script via `CustomEvent`.
 
