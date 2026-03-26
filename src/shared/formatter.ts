@@ -365,3 +365,30 @@ export function formatSessionJSON(session: CaptureSession): string {
 
   return JSON.stringify(result, null, 2)
 }
+
+export function formatSessionMarkdown(session: CaptureSession): string {
+  const sessionWithDwells = {
+    ...session,
+    cursorTrace: collapseDwells(computeDwells(session.cursorTrace)),
+  }
+
+  const header = `# PointDev Capture — ${session.title}\n\n` +
+    `> Captured from [${session.url}](${session.url}) on ${new Date(session.startedAt).toISOString().replace('T', ' ').slice(0, 19)}\n`
+
+  const body = formatSession(sessionWithDwells)
+
+  let screenshotSection = ''
+  if (session.screenshots.length > 0) {
+    const lines = ['\n---\n\n## Screenshot Attachments\n']
+    for (let i = 0; i < session.screenshots.length; i++) {
+      const s = session.screenshots[i]
+      const ts = formatTimestamp(s.timestampMs)
+      const desc = s.descriptionParts.join(' | ')
+      lines.push(`![Screenshot ${i + 1}](screenshot-${i + 1}.jpg)`)
+      lines.push(`*[${ts}] ${desc}*\n`)
+    }
+    screenshotSection = lines.join('\n')
+  }
+
+  return header + '\n' + body + screenshotSection
+}
