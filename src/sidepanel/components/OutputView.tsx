@@ -60,6 +60,9 @@ export function OutputView({ session, onBack }: OutputViewProps) {
         </div>
       )}
       <CopyButton text={output} label={`Copy ${format === 'text' ? '' : format.toUpperCase() + ' '}to Clipboard`} />
+      <div style={{ marginTop: 8, fontSize: 11, color: 'var(--muted)' }}>
+        Tip: Run <code>npx @pointdev/bridge</code> to stream sessions to AI tools via MCP
+      </div>
     </div>
   )
 }

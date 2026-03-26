@@ -783,3 +783,49 @@ Voice, annotations, and cursor tracking all captured simultaneously on https://a
 - Issue #19 (screenshot at annotation timestamps) is now superseded by the intelligence module
 - Tag v0.1.0 release
 - NLnet submission
+
+---
+
+## Session 12 — 2026-03-26: Bridge Server — WebSocket + MCP Tool Handlers
+
+**Model:** Claude Opus 4.6 (1M context)
+**Human lead:** Braeden Bihag
+**AI role:** Implemented bridge server, MCP tool handlers, and extension push integration from P1 implementation plan
+
+### What happened
+
+1. **Task 4: WebSocket bridge server.** Created the `bridge/` package at repo root with `package.json`, `tsconfig.json`, and `BridgeServer` class. The server accepts WebSocket connections on a configurable port, receives `push_session` messages, stores the current session, and broadcasts updates to connected clients. Tests use port 0 for random port assignment.
+
+2. **Task 5: MCP tool handlers.** Implemented `buildMcpToolHandlers()` with four tools: `get_session` (full session JSON minus screenshot dataUrls), `get_voice_transcript`, `get_annotations`, and `get_screenshot` (returns base64 image with metadata). Created `bridge/src/index.ts` entry point that wires the WebSocket server to the MCP handlers.
+
+3. **Task 6: Extension push on capture complete.** Added `pushToBridge()` module-level function to `useCaptureSession.ts` that sends session data to `ws://localhost:3456` when capture completes. Fails silently if bridge is not running. Added a tip in `OutputView.tsx` pointing users to `npx @pointdev/bridge`.
+
+4. **All 128 tests pass** across 16 test files after all changes (7 new tests added for bridge server and MCP handlers).
+
+### Decisions and rationale
+
+| Decision | Made by | Rationale |
+|----------|---------|-----------|
+| Bridge as separate package at `bridge/` | Plan (human-authored) | Independent subsystem with its own dependencies (ws, @anthropic-ai/sdk) |
+| Silent fail on bridge push | Plan (human-authored) | Bridge is optional — extension must work without it |
+| Port 0 in tests | Plan (human-authored) | Avoids port conflicts in CI/parallel test runs |
+| `ws` also installed at root | AI | Root vitest imports bridge source directly, needs `ws` resolvable |
+
+### What was AI-generated vs. human-authored
+
+- Implementation plan with complete code was human-authored (pre-existing at `docs/superpowers/plans/2026-03-26-p1-implementation.md`)
+- AI executed the plan: created files, ran tests, made commits
+- AI added `ws` and `@types/ws` to root `devDependencies` (not in plan, but required for tests to resolve imports)
+
+### Artifacts produced
+
+| Artifact | Path | Status |
+|----------|------|--------|
+| Bridge package config | `bridge/package.json`, `bridge/tsconfig.json` | Created |
+| WebSocket server | `bridge/src/server.ts` | Created |
+| MCP tool handlers | `bridge/src/mcp.ts` | Created |
+| Bridge entry point | `bridge/src/index.ts` | Created |
+| Server tests | `tests/bridge/server.test.ts` | 3 tests passing |
+| MCP tests | `tests/bridge/mcp.test.ts` | 4 tests passing |
+| Extension push | `src/sidepanel/hooks/useCaptureSession.ts` | Updated |
+| Output view tip | `src/sidepanel/components/OutputView.tsx` | Updated |
