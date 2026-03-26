@@ -5,6 +5,19 @@ import { ScreenshotIntelligence } from '../screenshot-intelligence'
 
 type CaptureState = 'idle' | 'preparing' | 'capturing' | 'complete' | 'error'
 
+function pushToBridge(session: CaptureSession): void {
+  try {
+    const ws = new WebSocket('ws://localhost:3456')
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: 'push_session', session }))
+      ws.close()
+    }
+    ws.onerror = () => {} // Bridge not running — silent fail
+  } catch {
+    // WebSocket not available — silent fail
+  }
+}
+
 export function useCaptureSession() {
   const [state, setState] = useState<CaptureState>('idle')
   const [session, setSession] = useState<CaptureSession | null>(null)
@@ -99,6 +112,7 @@ export function useCaptureSession() {
     if (response?.type === 'CAPTURE_COMPLETE') {
       setSession(response.session)
       setState('complete')
+      pushToBridge(response.session)
     }
     portRef.current?.disconnect()
     portRef.current = null

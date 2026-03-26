@@ -35,6 +35,9 @@ export function OutputView({ session, onBack }: OutputViewProps) {
         </div>
       )}
       <CopyButton text={output} />
+      <div style={{ marginTop: 8, fontSize: 11, color: 'var(--muted)' }}>
+        Tip: Run <code>npx @pointdev/bridge</code> to stream sessions to AI tools via MCP
+      </div>
     </div>
   )
 }
