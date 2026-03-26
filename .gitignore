@@ -3,3 +3,4 @@ dist/
 *.log
 .DS_Store
 docs/nlnet-draft*
+.claude/worktrees/
