@@ -12,7 +12,6 @@
     "dev": "tsx src/index.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.39.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {

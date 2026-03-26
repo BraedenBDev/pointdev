@@ -35,17 +35,19 @@ export class BridgeServer {
   }
 
   async start(): Promise<void> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       this.wss = new WebSocketServer({ port: this._port }, () => {
         console.log(`[PointDev Bridge] WebSocket server listening on port ${this.port}`)
         resolve()
       })
 
+      this.wss.on('error', (err) => reject(err))
+
       this.wss.on('connection', (ws) => {
         ws.on('message', (data) => {
           try {
             const msg = JSON.parse(data.toString())
-            if (msg.type === 'push_session') {
+            if (msg.type === 'push_session' && msg.session?.id) {
               this.pushSession(msg.session)
             }
           } catch {
@@ -58,9 +60,10 @@ export class BridgeServer {
 
   async stop(): Promise<void> {
     return new Promise((resolve) => {
-      if (this.wss) {
-        this.wss.close(() => resolve())
-        this.wss = null
+      const server = this.wss
+      this.wss = null
+      if (server) {
+        server.close(() => resolve())
       } else {
         resolve()
       }

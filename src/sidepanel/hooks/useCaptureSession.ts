@@ -5,17 +5,20 @@ import { ScreenshotIntelligence } from '../screenshot-intelligence'
 
 type CaptureState = 'idle' | 'preparing' | 'capturing' | 'complete' | 'error'
 
+/** Push session to bridge server. Silent fail if bridge is not running. */
 function pushToBridge(session: CaptureSession): void {
   try {
+    const stripped = {
+      ...session,
+      screenshots: session.screenshots.map(({ dataUrl, ...rest }) => rest),
+    }
     const ws = new WebSocket('ws://localhost:3456')
     ws.onopen = () => {
-      ws.send(JSON.stringify({ type: 'push_session', session }))
+      ws.send(JSON.stringify({ type: 'push_session', session: stripped }))
       ws.close()
     }
-    ws.onerror = () => {} // Bridge not running — silent fail
-  } catch {
-    // WebSocket not available — silent fail
-  }
+    ws.onerror = () => {}
+  } catch {}
 }
 
 export function useCaptureSession() {
