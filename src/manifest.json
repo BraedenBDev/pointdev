@@ -31,5 +31,8 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; connect-src 'self' https://*.huggingface.co https://*.hf.co https://cdn.jsdelivr.net http://localhost:* ws://localhost:*; object-src 'self'"
   }
 }
