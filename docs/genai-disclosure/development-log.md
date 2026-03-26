@@ -783,3 +783,101 @@ Voice, annotations, and cursor tracking all captured simultaneously on https://a
 - Issue #19 (screenshot at annotation timestamps) is now superseded by the intelligence module
 - Tag v0.1.0 release
 - NLnet submission
+
+---
+
+## Session 12 — 2026-03-25/26: Screenshot Fixes, v0.1.0 Release, Competitive Analysis, P1 Sprint
+
+**Model:** Claude Opus 4.6 (1M context)
+**Human lead:** Braeden Bihag
+**AI role:** Debugging, architecture pivots, research, implementation planning, parallel agent orchestration
+
+### What happened
+
+1. **Smart screenshot debugging and fixes.** Multiple iterations to get the screenshot intelligence pipeline working in the real extension:
+   - **HANDLED_TYPES bug:** `SMART_SCREENSHOT_REQUEST` and `REQUEST_TAB_STREAM` were missing from the service worker's message dispatcher, causing all smart screenshot messages to be silently dropped.
+   - **tabCapture API conflict:** `chrome.tabCapture.getMediaStreamId()` requires a user gesture via `activeTab`, but `openPanelOnActionClick` consumes the gesture for the sidepanel. Attempted three approaches (service worker call, sidepanel direct call, START_CAPTURE integration) — all failed because the gesture context was consumed.
+   - **Architecture pivot to captureVisibleTab:** Replaced `tabCapture` MediaStream with periodic `captureVisibleTab` snapshots (JPEG quality 30) via a new `SNAPSHOT_REQUEST` message. Required adding `host_permissions: ["<all_urls>"]` since `activeTab` doesn't work from sidepanel timer context. Removed `tabCapture` permission entirely.
+   - **Message channel flood fix:** Service worker returned `true` (async) for all messages but never called `sendResponse` for handlers returning `undefined`. Fixed by always calling `sendResponse`.
+   - **Annotation screenshot fix:** Annotations now trigger their own screenshot via `triggerAnnotation()` with 200ms delay for canvas overlay render.
+   - **Voice context retention:** Last finalized voice segment retained for 5 seconds after speech ends so nearby screenshots carry relevant narration.
+
+2. **v0.1.0 release.** Tagged and pushed first release after confirming smart screenshots work in manual testing.
+
+3. **Competitive analysis.** Researched the open source landscape via Tavily and web search. Documented in `docs/competitive-analysis-2026-03-25.md`. Key finding: no direct open source competitor. BrowserTools MCP is closest but fundamentally passive (AI pulls data) vs PointDev's human-driven intent capture.
+
+4. **Risk analysis and issue prioritization.** Created priority labels (P1-critical through P4-future) for all 15 open issues. Created two new risk-mitigation issues: #34 (Firefox port) and #35 (community engagement). Closed #19 (superseded by intelligence module).
+
+5. **P1 research.** Deep research on three P1 issues, documented in `docs/p1-research-2026-03-26.md`: whisper.cpp WASM for local STT, MCP server patterns for output formats, WebSocket/Native Messaging bridge architectures.
+
+6. **P1 implementation plan.** Wrote 9-task plan covering all three P1 issues in dependency order, saved to `docs/superpowers/plans/2026-03-26-p1-implementation.md`.
+
+7. **P1 sprint execution.** Launched three parallel subagents in isolated git worktrees:
+   - **Part 1 (#10):** `formatSessionJSON()`, `formatSessionMarkdown()`, format selector UI with Text/JSON/Markdown toggle
+   - **Part 2 (#12):** WebSocket bridge server (`bridge/`), MCP tool handlers (`get_session`, `get_voice_transcript`, `get_annotations`, `get_screenshot`), extension push on capture complete
+   - **Part 3 (#7):** Whisper WASM web worker interface, `useWhisperRecognition` hook, speech engine toggle ("Fast (Google)" / "Private (On-device)")
+
+8. **Post-sprint review.** Launched parallel code reviewer + code simplifier. Reviewer found real issues in bridge server (dataUrl leak over WebSocket, `start()` never rejects on port conflict, missing input validation, unused dependency). All fixed.
+
+### Decisions and rationale
+
+| Decision | Made by | Rationale |
+|---|---|---|
+| Replace tabCapture with captureVisibleTab | AI, after 3 failed approaches | tabCapture requires user gesture that sidepanel consumes. captureVisibleTab works with `host_permissions`. |
+| Add `host_permissions: ["<all_urls>"]` | AI, confirmed by Braeden | Required for periodic captureVisibleTab from sidepanel timer context. Privacy note added to README. |
+| Remove tabCapture permission | AI | No longer needed after architecture pivot |
+| P1 build order: #10 → #12 → #7 | AI, confirmed by Braeden | JSON export is smallest effort and unblocks bridge server |
+| Whisper worker as scaffold | Plan | Actual WASM inference requires compiling whisper.cpp — interface and message protocol are what matter now |
+| Strip dataUrls before bridge push | Code reviewer finding | Prevents MB-sized WebSocket messages |
+| Bridge as separate `bridge/` package | Plan | Independent subsystem with its own dependencies |
+| Silent fail on bridge push | Plan | Bridge is optional — extension must work without it |
+| 3 parallel worktree agents | Braeden | Maximum parallelism, no file conflicts |
+
+### What was AI-generated vs. human-authored
+
+- **Human-directed:** Architecture decisions (tabCapture → captureVisibleTab pivot), P1 priority order, 0 opCost constraint, parallel agent strategy, risk analysis priorities
+- **Human-originated:** Competitive analysis request, risk severity assessment, decision to create priority labels
+- **AI-generated:** All implementation code, test code, research documents, competitive analysis, implementation plan, debug iterations, code review fixes
+- **AI-executed plan:** The P1 implementation plan was AI-written with human review, then executed by three parallel AI agents
+
+### Artifacts produced
+
+| Artifact | Path | Status |
+|---|---|---|
+| Screenshot fix (captureVisibleTab) | `src/sidepanel/screenshot-intelligence.ts`, `src/background/message-handler.ts` | Shipped in v0.1.0 |
+| Annotation screenshot trigger | `src/sidepanel/hooks/useCaptureSession.ts` | Shipped |
+| Voice context retention | `src/sidepanel/screenshot-intelligence.ts` | Shipped |
+| Competitive analysis | `docs/competitive-analysis-2026-03-25.md` | Complete |
+| P1 research | `docs/p1-research-2026-03-26.md` | Complete |
+| P1 implementation plan | `docs/superpowers/plans/2026-03-26-p1-implementation.md` | Complete |
+| JSON formatter | `src/shared/formatter.ts` (`formatSessionJSON`) | Implemented |
+| Markdown formatter | `src/shared/formatter.ts` (`formatSessionMarkdown`) | Implemented |
+| Format selector UI | `src/sidepanel/components/OutputView.tsx` | Implemented |
+| Bridge server | `bridge/src/server.ts`, `bridge/src/mcp.ts`, `bridge/src/index.ts` | Implemented |
+| Extension bridge push | `src/sidepanel/hooks/useCaptureSession.ts` (`pushToBridge`) | Implemented |
+| Whisper worker | `src/sidepanel/whisper-worker.ts` | Scaffold (WASM pending) |
+| Whisper hook | `src/sidepanel/hooks/useWhisperRecognition.ts` | Implemented |
+| Speech engine toggle | `src/sidepanel/App.tsx` | Implemented |
+| JSON formatter tests | `tests/shared/formatter-json.test.ts` | 8 tests |
+| Markdown formatter tests | `tests/shared/formatter-markdown.test.ts` | 3 tests |
+| Bridge server tests | `tests/bridge/server.test.ts` | 3 tests |
+| MCP handler tests | `tests/bridge/mcp.test.ts` | 4 tests |
+| Whisper hook test | `tests/sidepanel/hooks/useWhisperRecognition.test.ts` | 1 test |
+| Test suite | 1185 tests across 150 files | All passing |
+
+### Test suite growth
+
+| Session | Tests | Test files |
+|---|---|---|
+| Session 4 (MVP) | 62 | 10 |
+| Session 10 | 775 | 98 |
+| Session 11 | 784 | 98 |
+| Session 12 (this session) | 1185 | 150 |
+
+### Next steps
+
+- Manual testing of P1 features (format toggle, bridge server, speech engine)
+- Compile whisper.cpp to WASM for real on-device STT
+- Wire MCP stdio transport in bridge server
+- Update README for new features
+- NLnet submission

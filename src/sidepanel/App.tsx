@@ -1,14 +1,29 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { useCaptureSession } from './hooks/useCaptureSession'
 import { useSpeechRecognition } from './hooks/useSpeechRecognition'
+import { useWhisperRecognition } from './hooks/useWhisperRecognition'
 import { CaptureControls } from './components/CaptureControls'
 import { LiveFeedback } from './components/LiveFeedback'
 import { OutputView } from './components/OutputView'
 import './styles.css'
 
+type SpeechEngine = 'web-speech' | 'whisper'
+
+function toggleStyle(active: boolean): React.CSSProperties {
+  return {
+    padding: '3px 10px', fontSize: 11, borderRadius: 'var(--radius)',
+    border: '1px solid var(--border)', cursor: 'pointer',
+    background: active ? 'var(--accent)' : 'var(--code-bg)',
+    color: active ? '#fff' : 'var(--fg)',
+  }
+}
+
 export function App() {
   const { state, session, error, startCapture, stopCapture, setMode, reset, setVoiceSignal } = useCaptureSession()
-  const speech = useSpeechRecognition()
+  const [engine, setEngine] = useState<SpeechEngine>('web-speech')
+  const webSpeech = useSpeechRecognition()
+  const whisper = useWhisperRecognition()
+  const speech = engine === 'whisper' ? whisper : webSpeech
   const captureStartRef = useRef(0)
 
   // Send transcript updates and feed voice signal to screenshot intelligence
@@ -98,6 +113,12 @@ export function App() {
         onModeChange={setMode}
       />
 
+      {state === 'capturing' && engine === 'whisper' && whisper.modelState === 'downloading' && (
+        <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
+          Downloading speech model... {Math.round(whisper.downloadProgress * 100)}%
+        </div>
+      )}
+
       {state === 'capturing' && (
         <LiveFeedback
           session={session}
@@ -106,6 +127,20 @@ export function App() {
           transcript={speech.transcript}
           captureStartedAt={captureStartRef.current}
         />
+      )}
+
+      {state === 'idle' && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>Speech engine:</div>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button onClick={() => setEngine('web-speech')} style={toggleStyle(engine === 'web-speech')}>
+              Fast (Google)
+            </button>
+            <button onClick={() => setEngine('whisper')} style={toggleStyle(engine === 'whisper')}>
+              Private (On-device)
+            </button>
+          </div>
+        </div>
       )}
 
       {state === 'idle' && (

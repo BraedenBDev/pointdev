@@ -63,7 +63,7 @@ export class ScreenshotIntelligence {
   constructor(onInterestingFrame: OnInterestingFrame) {
     this.onInterestingFrame = onInterestingFrame
     this.canvas = new OffscreenCanvas(SAMPLE_WIDTH, SAMPLE_HEIGHT)
-    this.ctx = this.canvas.getContext('2d')!
+    this.ctx = this.canvas.getContext('2d', { willReadFrequently: true })!
   }
 
   start(captureStartedAt: number): void {
