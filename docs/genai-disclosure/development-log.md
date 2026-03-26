@@ -855,7 +855,7 @@ Voice, annotations, and cursor tracking all captured simultaneously on https://a
 | Format selector UI | `src/sidepanel/components/OutputView.tsx` | Implemented |
 | Bridge server | `bridge/src/server.ts`, `bridge/src/mcp.ts`, `bridge/src/index.ts` | Implemented |
 | Extension bridge push | `src/sidepanel/hooks/useCaptureSession.ts` (`pushToBridge`) | Implemented |
-| Whisper worker | `src/sidepanel/whisper-worker.ts` | Scaffold (WASM pending) |
+| Whisper worker | `src/sidepanel/whisper-worker.ts` | Working (Transformers.js) |
 | Whisper hook | `src/sidepanel/hooks/useWhisperRecognition.ts` | Implemented |
 | Speech engine toggle | `src/sidepanel/App.tsx` | Implemented |
 | JSON formatter tests | `tests/shared/formatter-json.test.ts` | 8 tests |
@@ -872,12 +872,21 @@ Voice, annotations, and cursor tracking all captured simultaneously on https://a
 | Session 4 (MVP) | 62 | 10 |
 | Session 10 | 775 | 98 |
 | Session 11 | 784 | 98 |
-| Session 12 (this session) | 1185 | 150 |
+| Session 12 (this session) | 1188 | 150 |
+
+### Whisper on-device STT — working
+
+After multiple iterations debugging Chrome extension constraints:
+1. `@huggingface/transformers` v3 failed — dynamically imports ONNX Runtime from CDN, blocked by MV3 CSP (`script-src` cannot include remote URLs)
+2. Switched to `@xenova/transformers` v2 — bundles ONNX Runtime WASM locally, works in Chrome extensions
+3. Added CSP: `wasm-unsafe-eval` for WASM execution, `connect-src` for HF model downloads
+4. Model loads and runs inference successfully. ONNX Runtime warns about unused initializers (harmless). Blob worker CSP warnings (harmless — falls back to single-threaded).
+5. Transcription is slow (~3-5s per 3s audio chunk) due to WASM single-thread fallback. Functional but not real-time.
+6. Tested and confirmed: on-device transcription produces actual text with zero cloud dependency.
 
 ### Next steps
 
-- Manual testing of P1 features (format toggle, bridge server, speech engine)
-- Compile whisper.cpp to WASM for real on-device STT
+- Optimize Whisper performance (WebGPU backend, larger chunks, model caching)
 - Wire MCP stdio transport in bridge server
 - Update README for new features
 - NLnet submission

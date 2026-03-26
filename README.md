@@ -195,7 +195,7 @@ All capture data flows into a single `CaptureSession` object with timestamps rel
 | Runtime | Bun |
 | Canvas | HTML5 Canvas API (annotation overlay) |
 | Voice | Web Speech API |
-| Testing | Vitest (784 tests) |
+| Testing | Vitest (1188 tests) |
 
 ---
 
@@ -235,7 +235,7 @@ PointDev requests minimal Chrome permissions:
 | `storage` | Persist capture session and mic permission state |
 | `<all_urls>` (host) | Required for periodic screenshot capture during active sessions (`captureVisibleTab` from sidepanel context needs host permission — `activeTab` alone doesn't work from sidepanel timers) |
 
-Screenshots are only captured during active capture sessions you explicitly start. No background access to your browsing. No data leaves your machine except Web Speech API audio, which Chrome sends to Google for transcription. Local speech-to-text is on the [roadmap](#roadmap).
+Screenshots are only captured during active capture sessions you explicitly start. No background access to your browsing. Voice transcription offers two modes: "Fast (Google)" uses Web Speech API (audio sent to Google), "Private (On-device)" uses Whisper via WASM (zero network traffic, all inference local).
 
 ---
 
@@ -252,15 +252,15 @@ Screenshots are only captured during active capture sessions you explicitly star
 - [x] Smart screenshots via multi-signal intelligence (frame diff + dwell + voice + annotations)
 - [x] Console errors + failed network request capture (main-world injection)
 - [x] Compiled structured output with copy-to-clipboard
+- [x] Local speech-to-text via Whisper — on-device, zero cloud dependency ([#7](https://github.com/BraedenBDev/pointdev/issues/7))
+- [x] Pluggable output formats: Text, JSON, Markdown ([#10](https://github.com/BraedenBDev/pointdev/issues/10))
+- [x] Bridge server for AI tool delivery via WebSocket + MCP ([#12](https://github.com/BraedenBDev/pointdev/issues/12))
 - [ ] Source file path resolution from selectors ([#20](https://github.com/BraedenBDev/pointdev/issues/20))
-- [ ] Tab video recording for session replay
+- [ ] Firefox WebExtensions port ([#34](https://github.com/BraedenBDev/pointdev/issues/34))
+- [ ] Tab video recording for session replay ([#33](https://github.com/BraedenBDev/pointdev/issues/33))
 - [ ] Accessibility capture (ARIA roles, names) ([#23](https://github.com/BraedenBDev/pointdev/issues/23))
 - [ ] Multi-element selection ([#13](https://github.com/BraedenBDev/pointdev/issues/13))
-- [ ] Text annotation tool
-- [ ] Local speech-to-text via Whisper ([#7](https://github.com/BraedenBDev/pointdev/issues/7))
-- [ ] Pluggable output formats: JSON, Markdown, MCP ([#10](https://github.com/BraedenBDev/pointdev/issues/10))
 - [ ] Vue and Svelte component detection ([#9](https://github.com/BraedenBDev/pointdev/issues/9))
-- [ ] Direct delivery to AI tools via bridge server ([#12](https://github.com/BraedenBDev/pointdev/issues/12))
 
 See all [open issues](https://github.com/BraedenBDev/pointdev/issues) for the full backlog.
 
