@@ -283,8 +283,8 @@ export function formatTimestamp(ms: number): string {
 }
 
 export function formatSessionJSON(session: CaptureSession): string {
-  const collapsed = collapseDwells(computeDwells(session.cursorTrace))
-  const dwells = collapsed
+  // Expects cursorTrace already collapsed by caller (OutputView)
+  const dwells = session.cursorTrace
     .filter(s => s.dwellMs != null && s.dwellMs > 0)
     .map(s => ({
       element: s.nearestElement || 'unknown',
@@ -367,15 +367,11 @@ export function formatSessionJSON(session: CaptureSession): string {
 }
 
 export function formatSessionMarkdown(session: CaptureSession): string {
-  const sessionWithDwells = {
-    ...session,
-    cursorTrace: collapseDwells(computeDwells(session.cursorTrace)),
-  }
-
+  // Expects cursorTrace already collapsed by caller (OutputView)
   const header = `# PointDev Capture — ${session.title}\n\n` +
     `> Captured from [${session.url}](${session.url}) on ${new Date(session.startedAt).toISOString().replace('T', ' ').slice(0, 19)}\n`
 
-  const body = formatSession(sessionWithDwells)
+  const body = formatSession(session)
 
   let screenshotSection = ''
   if (session.screenshots.length > 0) {

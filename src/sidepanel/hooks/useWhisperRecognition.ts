@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import type { VoiceSegment } from '@shared/types'
 
 type WhisperState = 'idle' | 'downloading' | 'ready' | 'listening' | 'error'
@@ -29,17 +29,18 @@ export function useWhisperRecognition(): UseWhisperRecognitionReturn {
   const [downloadProgress, setDownloadProgress] = useState(0)
   const workerRef = useRef<Worker | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
   const captureStartRef = useRef(0)
 
-  // Check mic permission on mount (same as Web Speech version)
-  useState(() => {
+  // Check mic permission on mount
+  useEffect(() => {
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then(stream => {
         stream.getTracks().forEach(t => t.stop())
         setMicPermission('granted')
       })
       .catch(() => setMicPermission('needs-setup'))
-  })
+  }, [])
 
   const requestMicPermission = useCallback(async () => {
     try {
@@ -63,7 +64,6 @@ export function useWhisperRecognition(): UseWhisperRecognitionReturn {
     setSegments([])
     setError(null)
 
-    // Initialize worker
     const worker = new Worker(
       new URL('../whisper-worker.ts', import.meta.url),
       { type: 'module' }
@@ -109,9 +109,9 @@ export function useWhisperRecognition(): UseWhisperRecognitionReturn {
       setIsListening(true)
       setModelState('listening')
 
-      // Process audio in chunks using AudioContext
-      // NOTE: ScriptProcessorNode is deprecated but works — migrate to AudioWorklet in future
+      // NOTE: ScriptProcessorNode is deprecated — migrate to AudioWorklet in future
       const audioContext = new AudioContext({ sampleRate: 16000 })
+      audioContextRef.current = audioContext
       const source = audioContext.createMediaStreamSource(stream)
       const processor = audioContext.createScriptProcessor(4096, 1, 1)
 
@@ -124,7 +124,6 @@ export function useWhisperRecognition(): UseWhisperRecognitionReturn {
         audioBuffer.push(new Float32Array(channelData))
 
         if (Date.now() - lastProcessTime >= CHUNK_DURATION_MS) {
-          // Concatenate buffer and send to worker
           const totalLength = audioBuffer.reduce((sum, b) => sum + b.length, 0)
           const combined = new Float32Array(totalLength)
           let offset = 0
@@ -145,14 +144,21 @@ export function useWhisperRecognition(): UseWhisperRecognitionReturn {
         }
       }
 
+      // Connect processor to a silent destination to avoid audio echo
+      // ScriptProcessorNode requires an output connection to fire onaudioprocess
+      const silentDest = audioContext.createMediaStreamDestination()
       source.connect(processor)
-      processor.connect(audioContext.destination)
+      processor.connect(silentDest)
     } catch (err) {
       setError('Failed to start audio capture: ' + String(err))
     }
   }, [])
 
   const stop = useCallback(() => {
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => {})
+      audioContextRef.current = null
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop())
       streamRef.current = null

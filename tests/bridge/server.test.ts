@@ -15,7 +15,7 @@ describe('BridgeServer', () => {
   it('starts and stops without error', async () => {
     await server.start()
     expect(server.port).toBeGreaterThan(0)
-    await server.stop()
+    // afterEach handles stop — no explicit stop here to avoid double-stop
   })
 
   it('stores session data received via pushSession', () => {

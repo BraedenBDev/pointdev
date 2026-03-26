@@ -29,7 +29,9 @@ self.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
       self.postMessage({ type: 'progress', progress: 0 } as WorkerOutMessage)
 
       const response = await fetch(modelUrl)
-      const reader = response.body!.getReader()
+      if (!response.ok) throw new Error(`Model download failed: ${response.status}`)
+      if (!response.body) throw new Error('Response body is null')
+      const reader = response.body.getReader()
       const contentLength = parseInt(response.headers.get('Content-Length') || '0', 10)
       let received = 0
       const chunks: Uint8Array[] = []

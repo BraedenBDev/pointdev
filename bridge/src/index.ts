@@ -13,9 +13,11 @@ async function main(): Promise<void> {
 
   console.log('[PointDev Bridge] Ready. Waiting for session data from extension...')
 
-  process.on('SIGINT', async () => {
-    await server.stop()
-    process.exit(0)
+  let shuttingDown = false
+  process.on('SIGINT', () => {
+    if (shuttingDown) return
+    shuttingDown = true
+    server.stop().finally(() => process.exit(0))
   })
 }
 

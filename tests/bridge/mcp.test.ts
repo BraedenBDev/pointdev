@@ -38,4 +38,36 @@ describe('MCP tool handlers', () => {
     const parsed = JSON.parse(result.content[0].text)
     expect(parsed).toHaveLength(1)
   })
+
+  it('get_screenshot returns image when dataUrl is present', () => {
+    const session = {
+      screenshots: [{
+        dataUrl: 'data:image/png;base64,AQIDBA==',
+        timestampMs: 3000,
+        trigger: 'voice',
+        voiceContext: 'test',
+        descriptionParts: ['Voice narration active'],
+      }],
+    }
+    const handlers = buildMcpToolHandlers(() => session)
+    const result = handlers.get_screenshot({ index: 0 })
+    expect(result.content[0]).toEqual({ type: 'image', data: 'AQIDBA==', mimeType: 'image/png' })
+    const meta = JSON.parse(result.content[1].text)
+    expect(meta.trigger).toBe('voice')
+  })
+
+  it('get_screenshot returns unavailable message when dataUrl is stripped', () => {
+    const session = {
+      screenshots: [{ timestampMs: 3000, descriptionParts: ['Auto-captured'] }],
+    }
+    const handlers = buildMcpToolHandlers(() => session)
+    const result = handlers.get_screenshot({ index: 0 })
+    expect(result.content[0].text).toContain('not available')
+  })
+
+  it('get_screenshot returns not found for invalid index', () => {
+    const handlers = buildMcpToolHandlers(() => ({ screenshots: [] }))
+    const result = handlers.get_screenshot({ index: 5 })
+    expect(result.content[0].text).toContain('not found')
+  })
 })

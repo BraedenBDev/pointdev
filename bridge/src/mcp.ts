@@ -38,6 +38,9 @@ export function buildMcpToolHandlers(getSession: GetSession) {
       return { content: [{ type: 'text', text: JSON.stringify(session.annotations, null, 2) }] }
     },
 
+    // Note: screenshot dataUrls are stripped before bridge push to avoid
+    // MB-sized WebSocket messages. This handler works if a future transport
+    // preserves dataUrls (e.g., file-based bridge with separate image files).
     get_screenshot(args: { index: number }): ToolResult {
       const session = getSession()
       if (!session?.screenshots?.[args.index]) {
@@ -45,7 +48,7 @@ export function buildMcpToolHandlers(getSession: GetSession) {
       }
       const screenshot = session.screenshots[args.index]
       if (!screenshot.dataUrl) {
-        return { content: [{ type: 'text', text: 'Screenshot image data not available.' }] }
+        return { content: [{ type: 'text', text: 'Screenshot image data not available (stripped during bridge push to reduce payload size).' }] }
       }
       const base64 = screenshot.dataUrl.split(',')[1]
       return {

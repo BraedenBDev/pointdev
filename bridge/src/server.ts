@@ -36,12 +36,20 @@ export class BridgeServer {
 
   async start(): Promise<void> {
     return new Promise((resolve, reject) => {
+      let started = false
       this.wss = new WebSocketServer({ port: this._port }, () => {
+        started = true
         console.log(`[PointDev Bridge] WebSocket server listening on port ${this.port}`)
         resolve()
       })
 
-      this.wss.on('error', (err) => reject(err))
+      this.wss.on('error', (err) => {
+        if (!started) {
+          reject(err)
+        } else {
+          console.error('[PointDev Bridge] WebSocket server error:', err)
+        }
+      })
 
       this.wss.on('connection', (ws) => {
         ws.on('message', (data) => {
