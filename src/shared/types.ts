@@ -144,6 +144,8 @@ export interface FailedRequest {
   timestampMs: number
 }
 
+export type OutputFormat = 'text' | 'json' | 'markdown'
+
 export function createEmptySession(id: string, tabId: number, url: string, title: string, viewport: { width: number; height: number }): CaptureSession {
   return {
     id,

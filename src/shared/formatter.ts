@@ -1,4 +1,5 @@
 import type { CaptureSession, CircleCoords, ArrowCoords, FreehandCoords, RectangleCoords, BoxModel } from './types'
+import { computeDwells, collapseDwells } from './dwell'
 
 export function formatSession(session: CaptureSession): string {
   const sections: string[] = []
@@ -279,4 +280,88 @@ export function formatTimestamp(ms: number): string {
   const minutes = Math.floor(totalSeconds / 60)
   const seconds = totalSeconds % 60
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
+
+export function formatSessionJSON(session: CaptureSession): string {
+  const collapsed = collapseDwells(computeDwells(session.cursorTrace))
+  const dwells = collapsed
+    .filter(s => s.dwellMs != null && s.dwellMs > 0)
+    .map(s => ({
+      element: s.nearestElement || 'unknown',
+      x: s.x,
+      y: s.y,
+      durationMs: s.dwellMs!,
+      timestampMs: s.timestampMs,
+    }))
+
+  const result: Record<string, any> = {
+    context: {
+      url: session.url,
+      title: session.title,
+      viewport: session.viewport,
+      capturedAt: new Date(session.startedAt).toISOString(),
+    },
+  }
+
+  if (session.device) {
+    result.device = session.device
+  }
+
+  if (session.selectedElement) {
+    result.selectedElement = {
+      selector: session.selectedElement.selector,
+      computedStyles: session.selectedElement.computedStyles,
+      boxModel: session.selectedElement.boxModel,
+      domSubtree: session.selectedElement.domSubtree,
+      reactComponent: session.selectedElement.reactComponent,
+      cssVariables: session.selectedElement.cssVariables,
+    }
+  }
+
+  if (session.voiceRecording && session.voiceRecording.segments.length > 0) {
+    result.voice = {
+      transcript: session.voiceRecording.transcript,
+      durationMs: session.voiceRecording.durationMs,
+      segments: session.voiceRecording.segments,
+    }
+  }
+
+  if (session.annotations.length > 0) {
+    result.annotations = session.annotations.map(a => ({
+      type: a.type,
+      coordinates: a.coordinates,
+      timestampMs: a.timestampMs,
+      nearestElement: a.nearestElement,
+      nearestElementContext: a.nearestElementContext ? {
+        computedStyles: a.nearestElementContext.computedStyles,
+        boxModel: a.nearestElementContext.boxModel,
+        domSubtree: a.nearestElementContext.domSubtree,
+      } : undefined,
+    }))
+  }
+
+  if (dwells.length > 0) {
+    result.cursor = { dwells }
+  }
+
+  if (session.screenshots.length > 0) {
+    result.screenshots = session.screenshots.map(s => ({
+      timestampMs: s.timestampMs,
+      viewport: s.viewport,
+      descriptionParts: s.descriptionParts,
+      voiceContext: s.voiceContext,
+      trigger: s.trigger,
+      interestScore: s.interestScore,
+      signals: s.signals,
+      // dataUrl omitted — too large for clipboard/JSON export
+    }))
+  }
+
+  if (session.consoleErrors.length > 0 || session.failedRequests.length > 0) {
+    result.console = {}
+    if (session.consoleErrors.length > 0) result.console.errors = session.consoleErrors
+    if (session.failedRequests.length > 0) result.console.failedRequests = session.failedRequests
+  }
+
+  return JSON.stringify(result, null, 2)
 }
