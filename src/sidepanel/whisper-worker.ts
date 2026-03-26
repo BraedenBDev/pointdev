@@ -24,12 +24,12 @@ self.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
     try {
       // Load the whisper.cpp WASM module
       // This loads from the CDN — the model is cached by the browser
-      const modelUrl = msg.modelUrl || 'https://whisper.ggerganov.com/ggml-model-whisper-tiny.en-q5_1.bin'
+      const modelUrl = msg.modelUrl || 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en-q5_1.bin'
 
       self.postMessage({ type: 'progress', progress: 0 } as WorkerOutMessage)
 
       const response = await fetch(modelUrl)
-      if (!response.ok) throw new Error(`Model download failed: ${response.status}`)
+      if (!response.ok) throw new Error(`Whisper model download failed (HTTP ${response.status}). Check your internet connection.`)
       if (!response.body) throw new Error('Response body is null')
       const reader = response.body.getReader()
       const contentLength = parseInt(response.headers.get('Content-Length') || '0', 10)
