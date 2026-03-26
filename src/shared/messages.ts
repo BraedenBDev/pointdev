@@ -24,14 +24,13 @@ export type Message =
   | { type: 'PONG' }
 
   // Sidepanel → Service Worker (smart screenshots)
-  | { type: 'REQUEST_TAB_STREAM'; tabId: number }
+  | { type: 'SNAPSHOT_REQUEST' }
   | { type: 'SMART_SCREENSHOT_REQUEST'; data: SmartScreenshotSignals }
 
   // Service Worker → Sidepanel
   | { type: 'SESSION_UPDATED'; session: CaptureSession }
   | { type: 'CAPTURE_COMPLETE'; session: CaptureSession }
   | { type: 'CAPTURE_ERROR'; error: string }
-  | { type: 'TAB_STREAM_READY'; streamId: string }
   | { type: 'DWELL_UPDATE'; data: { element: string; durationMs: number; active: boolean } }
 
 export type CaptureMode = 'select' | 'circle' | 'arrow' | 'freehand' | 'rectangle'

@@ -255,14 +255,15 @@ export async function handleMessage(
       }
     }
 
-    case 'REQUEST_TAB_STREAM': {
+    case 'SNAPSHOT_REQUEST': {
+      if (!store.getSession()) return undefined
       try {
-        const streamId = await (chrome.tabCapture as any).getMediaStreamId({
-          targetTabId: message.tabId,
+        const dataUrl = await chrome.tabs.captureVisibleTab({
+          format: 'jpeg',
+          quality: 30,
         })
-        return { type: 'TAB_STREAM_READY', streamId }
-      } catch (err) {
-        console.error('[PointDev] tabCapture.getMediaStreamId failed:', err)
+        return { dataUrl }
+      } catch {
         return undefined
       }
     }

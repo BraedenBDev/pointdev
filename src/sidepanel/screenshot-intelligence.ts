@@ -31,14 +31,18 @@ const PIXEL_STRIDE = 4
 
 export type OnInterestingFrame = (signals: SmartScreenshotSignals) => void
 
+/**
+ * ScreenshotIntelligence uses periodic captureVisibleTab snapshots
+ * (via service worker) for frame differencing instead of tabCapture
+ * MediaStream, because tabCapture requires activeTab user gesture
+ * which conflicts with sidepanel activation.
+ */
 export class ScreenshotIntelligence {
-  private video: HTMLVideoElement
   private canvas: OffscreenCanvas
   private ctx: OffscreenCanvasRenderingContext2D
   private prevFrameData: Uint8ClampedArray | null = null
   private frameBuffer: Uint8ClampedArray | null = null
   private intervalId: number | null = null
-  private stream: MediaStream | null = null
   private captureStartedAt = 0
 
   // External signal state
@@ -53,29 +57,12 @@ export class ScreenshotIntelligence {
 
   constructor(onInterestingFrame: OnInterestingFrame) {
     this.onInterestingFrame = onInterestingFrame
-    this.video = document.createElement('video')
-    this.video.muted = true
-    this.video.autoplay = true
     this.canvas = new OffscreenCanvas(SAMPLE_WIDTH, SAMPLE_HEIGHT)
     this.ctx = this.canvas.getContext('2d')!
   }
 
-  async start(streamId: string, captureStartedAt: number): Promise<void> {
+  start(captureStartedAt: number): void {
     this.captureStartedAt = captureStartedAt
-
-    this.stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        mandatory: {
-          chromeMediaSource: 'tab',
-          chromeMediaSourceId: streamId,
-        },
-      } as any,
-      audio: false,
-    })
-
-    this.video.srcObject = this.stream
-    await this.video.play()
-
     this.intervalId = window.setInterval(() => this.sampleFrame(), SAMPLE_INTERVAL_MS)
   }
 
@@ -84,11 +71,6 @@ export class ScreenshotIntelligence {
       clearInterval(this.intervalId)
       this.intervalId = null
     }
-    if (this.stream) {
-      this.stream.getTracks().forEach(t => t.stop())
-      this.stream = null
-    }
-    this.video.srcObject = null
     this.prevFrameData = null
     this.frameBuffer = null
   }
@@ -119,10 +101,21 @@ export class ScreenshotIntelligence {
     })
   }
 
-  private sampleFrame(): void {
-    if (this.video.readyState < 2) return
+  private async sampleFrame(): Promise<void> {
+    // Request a low-quality snapshot from the service worker
+    let dataUrl: string
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'SNAPSHOT_REQUEST' })
+      if (!response?.dataUrl) return
+      dataUrl = response.dataUrl
+    } catch {
+      return // Service worker unavailable
+    }
 
-    this.ctx.drawImage(this.video, 0, 0, SAMPLE_WIDTH, SAMPLE_HEIGHT)
+    // Decode the data URL into pixel data at low resolution
+    const img = await createImageBitmap(await (await fetch(dataUrl)).blob())
+    this.ctx.drawImage(img, 0, 0, SAMPLE_WIDTH, SAMPLE_HEIGHT)
+    img.close()
     const { data } = this.ctx.getImageData(0, 0, SAMPLE_WIDTH, SAMPLE_HEIGHT)
 
     const frameDiffRatio = this.computeFrameDiff(data)

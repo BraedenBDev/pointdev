@@ -17,14 +17,13 @@ const HANDLED_TYPES = new Set([
   'START_CAPTURE', 'STOP_CAPTURE', 'SET_MODE',
   'TRANSCRIPT_UPDATE', 'ELEMENT_SELECTED', 'ANNOTATION_ADDED',
   'CURSOR_BATCH', 'DEVICE_METADATA', 'SCREENSHOT_REQUEST',
+  'SMART_SCREENSHOT_REQUEST', 'SNAPSHOT_REQUEST',
   'CONSOLE_BATCH',
 ])
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!HANDLED_TYPES.has(message.type)) return false
-  handleMessage(message, store).then(response => {
-    if (response) sendResponse(response)
-  })
+  handleMessage(message, store).then(sendResponse)
   return true // async response
 })
 

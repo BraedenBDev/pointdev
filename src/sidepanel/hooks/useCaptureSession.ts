@@ -61,29 +61,16 @@ export function useCaptureSession() {
       setSession(response.session)
       setState('capturing')
 
-      // Start screenshot intelligence with tabCapture
-      const tabId = response.session.tabId
-      try {
-        const streamResponse = await chrome.runtime.sendMessage({
-          type: 'REQUEST_TAB_STREAM',
-          tabId,
+      // Start screenshot intelligence — uses periodic captureVisibleTab
+      // snapshots via service worker for frame differencing
+      const intelligence = new ScreenshotIntelligence((signals) => {
+        chrome.runtime.sendMessage({
+          type: 'SMART_SCREENSHOT_REQUEST',
+          data: signals,
         })
-        if (streamResponse?.type === 'TAB_STREAM_READY') {
-          const intelligence = new ScreenshotIntelligence((signals) => {
-            // When an interesting frame is detected, request a full-res capture
-            chrome.runtime.sendMessage({
-              type: 'SMART_SCREENSHOT_REQUEST',
-              data: signals,
-            })
-          })
-          await intelligence.start(streamResponse.streamId, response.session.startedAt)
-          intelligenceRef.current = intelligence
-          console.log('[PointDev] ScreenshotIntelligence started')
-        }
-      } catch (err) {
-        // tabCapture failed — continue without smart screenshots
-        console.warn('[PointDev] Smart screenshots unavailable:', err)
-      }
+      })
+      intelligence.start(response.session.startedAt)
+      intelligenceRef.current = intelligence
     }
   }, [])
 

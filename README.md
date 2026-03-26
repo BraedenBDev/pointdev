@@ -225,9 +225,9 @@ PointDev requests minimal Chrome permissions:
 | `scripting` | Inject content script + main-world console/network capture |
 | `sidePanel` | The extension UI |
 | `storage` | Persist capture session and mic permission state |
-| `tabCapture` | Low-res video stream of the active tab for smart screenshot frame differencing |
+| `<all_urls>` (host) | Required for periodic screenshot capture during active sessions (`captureVisibleTab` from sidepanel context needs host permission — `activeTab` alone doesn't work from sidepanel timers) |
 
-No background access to your browsing. No host permissions. No data leaves your machine except Web Speech API audio, which Chrome sends to Google for transcription. Tab video data stays local and is never stored — only used for real-time frame comparison. Local speech-to-text is on the [roadmap](#roadmap).
+Screenshots are only captured during active capture sessions you explicitly start. No background access to your browsing. No data leaves your machine except Web Speech API audio, which Chrome sends to Google for transcription. Local speech-to-text is on the [roadmap](#roadmap).
 
 ---
 
