@@ -11,12 +11,26 @@ export function useCaptureSession() {
   const [error, setError] = useState<string | null>(null)
   const portRef = useRef<chrome.runtime.Port | null>(null)
   const intelligenceRef = useRef<ScreenshotIntelligence | null>(null)
+  const annotationCountRef = useRef(0)
 
   useEffect(() => {
     const listener = (message: Message) => {
       if (message.type === 'SESSION_UPDATED') {
         setSession(message.session)
         setState('capturing')
+
+        // When a new annotation is added, trigger an annotation screenshot
+        // after a short delay so the canvas overlay is visible in the capture
+        // Trigger annotation screenshot when a new annotation arrives
+        const annCount = message.session.annotations.length
+        if (annCount > annotationCountRef.current && intelligenceRef.current) {
+          annotationCountRef.current = annCount
+          const lastIdx = annCount - 1
+          // Delay so canvas overlay renders the annotation before capture
+          setTimeout(() => {
+            intelligenceRef.current?.triggerAnnotation(lastIdx)
+          }, 200)
+        }
       } else if (message.type === 'CAPTURE_COMPLETE') {
         setSession(message.session)
         setState('complete')
@@ -24,7 +38,6 @@ export function useCaptureSession() {
         setError(message.error)
         setState('error')
       } else if (message.type === 'DWELL_UPDATE') {
-        // Feed dwell signal to intelligence module
         intelligenceRef.current?.setDwellActive(
           message.data.active,
           message.data.element,
@@ -42,6 +55,7 @@ export function useCaptureSession() {
   const startCapture = useCallback(async () => {
     setState('preparing')
     setError(null)
+    annotationCountRef.current = 0
 
     // Establish keep-alive port
     portRef.current = chrome.runtime.connect({ name: 'pointdev-keepalive' })

@@ -48,9 +48,14 @@ export class ScreenshotIntelligence {
   // External signal state
   private _voiceActive = false
   private _voiceSegment = ''
+  private _lastFinalSegment = ''
+  private _lastFinalSegmentTime = 0
   private _dwellActive = false
   private _dwellElement = ''
   private _dwellDurationMs = 0
+
+  // Keep finalized voice context for 5s after speech ends
+  private static readonly VOICE_CONTEXT_RETENTION_MS = 5000
 
   private lastCaptureTime = 0
   private onInterestingFrame: OnInterestingFrame
@@ -73,12 +78,27 @@ export class ScreenshotIntelligence {
     }
     this.prevFrameData = null
     this.frameBuffer = null
+    this._lastFinalSegment = ''
+    this._lastFinalSegmentTime = 0
   }
 
   /** Update voice activity signal — call from speech recognition callbacks */
   setVoiceActive(active: boolean, segment?: string): void {
     this._voiceActive = active
-    this._voiceSegment = segment || ''
+    if (segment) {
+      this._voiceSegment = segment
+      this._lastFinalSegment = segment
+      this._lastFinalSegmentTime = Date.now()
+    } else if (!active) {
+      // Voice went silent — keep last segment for a retention window
+      // so screenshots captured shortly after speech carry context
+      const elapsed = Date.now() - this._lastFinalSegmentTime
+      if (elapsed < ScreenshotIntelligence.VOICE_CONTEXT_RETENTION_MS) {
+        this._voiceSegment = this._lastFinalSegment
+      } else {
+        this._voiceSegment = ''
+      }
+    }
   }
 
   /** Update dwell signal — call from DWELL_UPDATE messages */
