@@ -2,9 +2,10 @@ import { useState, useCallback } from 'react'
 
 interface CopyButtonProps {
   text: string
+  label?: string
 }
 
-export function CopyButton({ text }: CopyButtonProps) {
+export function CopyButton({ text, label }: CopyButtonProps) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = useCallback(async () => {
@@ -25,7 +26,7 @@ export function CopyButton({ text }: CopyButtonProps) {
   return (
     <div>
       <button className="btn-copy" onClick={handleCopy}>
-        {copied ? 'Copied!' : 'Copy to Clipboard'}
+        {copied ? 'Copied!' : (label || 'Copy to Clipboard')}
       </button>
       {copied && <div className="copied-feedback">Paste into your AI coding tool</div>}
     </div>
