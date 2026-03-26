@@ -20,7 +20,8 @@ interface UseWhisperRecognitionReturn {
 
 export function useWhisperRecognition(): UseWhisperRecognitionReturn {
   const [isListening, setIsListening] = useState(false)
-  const [micPermission, setMicPermission] = useState<'checking' | 'granted' | 'needs-setup'>('checking')
+  // Start as 'needs-setup' — mic is checked when user selects this engine, not on mount
+  const [micPermission, setMicPermission] = useState<'checking' | 'granted' | 'needs-setup'>('needs-setup')
   const [transcript, setTranscript] = useState('')
   const [interimTranscript, setInterimTranscript] = useState('')
   const [segments, setSegments] = useState<VoiceSegment[]>([])
@@ -31,16 +32,6 @@ export function useWhisperRecognition(): UseWhisperRecognitionReturn {
   const streamRef = useRef<MediaStream | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const captureStartRef = useRef(0)
-
-  // Check mic permission on mount
-  useEffect(() => {
-    navigator.mediaDevices.getUserMedia({ audio: true })
-      .then(stream => {
-        stream.getTracks().forEach(t => t.stop())
-        setMicPermission('granted')
-      })
-      .catch(() => setMicPermission('needs-setup'))
-  }, [])
 
   const requestMicPermission = useCallback(async () => {
     try {

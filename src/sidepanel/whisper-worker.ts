@@ -33,28 +33,40 @@ self.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
       if (!response.body) throw new Error('Response body is null')
       const reader = response.body.getReader()
       const contentLength = parseInt(response.headers.get('Content-Length') || '0', 10)
-      let received = 0
-      const chunks: Uint8Array[] = []
+
+      // Stream directly into pre-allocated buffer to halve peak memory
+      const modelData = contentLength > 0
+        ? new Uint8Array(contentLength)
+        : new Uint8Array(0)
+      let offset = 0
+      const chunks: Uint8Array[] = contentLength > 0 ? [] : []
 
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
-        chunks.push(value)
-        received += value.length
         if (contentLength > 0) {
-          self.postMessage({ type: 'progress', progress: received / contentLength } as WorkerOutMessage)
+          modelData.set(value, offset)
+          offset += value.length
+          self.postMessage({ type: 'progress', progress: offset / contentLength } as WorkerOutMessage)
+        } else {
+          // Unknown content length — fall back to chunk accumulation
+          chunks.push(value)
+          offset += value.length
         }
       }
 
-      const modelData = new Uint8Array(received)
-      let offset = 0
-      for (const chunk of chunks) {
-        modelData.set(chunk, offset)
-        offset += chunk.length
+      // If content length was unknown, assemble from chunks
+      let finalData = modelData
+      if (contentLength === 0 && chunks.length > 0) {
+        finalData = new Uint8Array(offset)
+        let pos = 0
+        for (const chunk of chunks) {
+          finalData.set(chunk, pos)
+          pos += chunk.length
+        }
       }
 
-      // Store model data for processing
-      whisperModule = { modelData }
+      whisperModule = { modelData: finalData }
       self.postMessage({ type: 'ready' } as WorkerOutMessage)
     } catch (err) {
       self.postMessage({ type: 'error', error: String(err) } as WorkerOutMessage)

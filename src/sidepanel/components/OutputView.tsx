@@ -6,6 +6,15 @@ import { computeDwells, collapseDwells } from '@shared/dwell'
 import { CopyButton } from './CopyButton'
 import { ScreenshotThumbnail } from './ScreenshotThumbnail'
 
+function toggleStyle(active: boolean): React.CSSProperties {
+  return {
+    padding: '3px 10px', fontSize: 11, borderRadius: 'var(--radius)',
+    border: '1px solid var(--border)', cursor: 'pointer',
+    background: active ? 'var(--accent)' : 'var(--code-bg)',
+    color: active ? '#fff' : 'var(--fg)',
+  }
+}
+
 interface OutputViewProps {
   session: CaptureSession
   onBack: () => void
@@ -14,17 +23,18 @@ interface OutputViewProps {
 export function OutputView({ session, onBack }: OutputViewProps) {
   const [format, setFormat] = useState<OutputFormat>('text')
 
+  const sessionWithDwells = useMemo(() => ({
+    ...session,
+    cursorTrace: collapseDwells(computeDwells(session.cursorTrace)),
+  }), [session])
+
   const output = useMemo(() => {
-    const sessionWithDwells = {
-      ...session,
-      cursorTrace: collapseDwells(computeDwells(session.cursorTrace)),
-    }
     switch (format) {
       case 'json': return formatSessionJSON(sessionWithDwells)
       case 'markdown': return formatSessionMarkdown(sessionWithDwells)
       default: return formatSession(sessionWithDwells)
     }
-  }, [session, format])
+  }, [sessionWithDwells, format])
 
   return (
     <div>
@@ -38,12 +48,7 @@ export function OutputView({ session, onBack }: OutputViewProps) {
           <button
             key={f}
             onClick={() => setFormat(f)}
-            style={{
-              padding: '3px 10px', fontSize: 11, borderRadius: 'var(--radius)',
-              border: '1px solid var(--border)', cursor: 'pointer',
-              background: format === f ? 'var(--accent)' : 'var(--code-bg)',
-              color: format === f ? '#fff' : 'var(--fg)',
-            }}
+            style={toggleStyle(format === f)}
           >
             {f === 'text' ? 'Text' : f === 'json' ? 'JSON' : 'Markdown'}
           </button>

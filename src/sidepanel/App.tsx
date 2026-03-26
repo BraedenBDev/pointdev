@@ -9,6 +9,15 @@ import './styles.css'
 
 type SpeechEngine = 'web-speech' | 'whisper'
 
+function toggleStyle(active: boolean): React.CSSProperties {
+  return {
+    padding: '3px 10px', fontSize: 11, borderRadius: 'var(--radius)',
+    border: '1px solid var(--border)', cursor: 'pointer',
+    background: active ? 'var(--accent)' : 'var(--code-bg)',
+    color: active ? '#fff' : 'var(--fg)',
+  }
+}
+
 export function App() {
   const { state, session, error, startCapture, stopCapture, setMode, reset, setVoiceSignal } = useCaptureSession()
   const [engine, setEngine] = useState<SpeechEngine>('web-speech')
@@ -124,26 +133,10 @@ export function App() {
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>Speech engine:</div>
           <div style={{ display: 'flex', gap: 4 }}>
-            <button
-              onClick={() => setEngine('web-speech')}
-              style={{
-                padding: '3px 10px', fontSize: 11, borderRadius: 'var(--radius)',
-                border: '1px solid var(--border)', cursor: 'pointer',
-                background: engine === 'web-speech' ? 'var(--accent)' : 'var(--code-bg)',
-                color: engine === 'web-speech' ? '#fff' : 'var(--fg)',
-              }}
-            >
+            <button onClick={() => setEngine('web-speech')} style={toggleStyle(engine === 'web-speech')}>
               Fast (Google)
             </button>
-            <button
-              onClick={() => setEngine('whisper')}
-              style={{
-                padding: '3px 10px', fontSize: 11, borderRadius: 'var(--radius)',
-                border: '1px solid var(--border)', cursor: 'pointer',
-                background: engine === 'whisper' ? 'var(--accent)' : 'var(--code-bg)',
-                color: engine === 'whisper' ? '#fff' : 'var(--fg)',
-              }}
-            >
+            <button onClick={() => setEngine('whisper')} style={toggleStyle(engine === 'whisper')}>
               Private (On-device)
             </button>
           </div>
