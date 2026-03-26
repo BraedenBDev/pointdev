@@ -71,12 +71,12 @@ This is actual output from PointDev, captured on a live site:
 - [00:29-00:36] Dwelled 6.2s over div.absolute.bottom-10 (during: "overlapping with the")
 
 ## Screenshots
-1. [00:10] Multiple signals — "the green is not working for me"
-   Signals: visual change: 16%, dwell: span.text-[var(--green)] (1.4s), voice: "the green is not working for me" [score: 0.7]
-2. [00:18] Multiple signals — "I think these images need to be a lot larger"
-   Signals: visual change: 0%, voice: "I think these images need to be a lot larger" [score: 0.6]
-3. [00:23] Circle around .cta-button — "and this button doesn't do anything"
-   Signals: voice: "and this button doesn't do anything" [score: 1.00]
+1. [00:11] Multiple signals — "large"
+   Signals: visual change: 12%, dwell: h1.font-display.text-hero (4.2s), voice: "large" [score: 0.9]
+2. [00:26] Multiple signals — "where you scroll CTA"
+   Signals: visual change: 31%, dwell: div.absolute.bottom-10 (7.3s), voice: "where you scroll CTA" [score: 0.8]
+3. [00:40] Circle around .lg\:min-h-\[100svh\] — "subtitle of the page"
+   Signals: voice: "subtitle of the page" [score: 1.00]
 ```
 
 ### What an AI Agent Does With This
