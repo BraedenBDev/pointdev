@@ -22,7 +22,7 @@ export function SegmentedButton({ options, value, onChange, className }: Segment
           className={cn(
             "flex-1 py-2 text-center text-[11px] font-medium rounded-lg transition-all cursor-pointer border-none",
             value === option.value
-              ? "bg-white text-on-surface shadow-sm"
+              ? "bg-surface text-on-surface shadow-sm"
               : "bg-transparent text-muted hover:text-on-surface-variant"
           )}
         >

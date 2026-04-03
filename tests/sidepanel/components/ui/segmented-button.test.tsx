@@ -19,7 +19,7 @@ describe('SegmentedButton', () => {
   it('highlights active option', () => {
     render(<SegmentedButton options={options} value="json" onChange={() => {}} />)
     const active = screen.getByText('JSON')
-    expect(active.className).toContain('bg-white')
+    expect(active.className).toContain('bg-surface')
   })
 
   it('calls onChange when option is clicked', () => {
