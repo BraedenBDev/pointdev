@@ -223,6 +223,9 @@ function handleWheel(e: WheelEvent) {
 }
 
 function startCapture() {
+  // Clean up any orphaned floating cards from previous extension sessions
+  document.querySelectorAll('[data-pointdev-float]').forEach(el => el.remove())
+
   captureStartedAt = Date.now()
   isCapturing = true
   currentMode = 'select'
