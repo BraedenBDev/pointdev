@@ -13,11 +13,14 @@ function pushToBridge(session: CaptureSession): void {
       screenshots: session.screenshots.map(({ dataUrl, ...rest }) => rest),
     }
     const ws = new WebSocket('ws://localhost:3456')
+    ws.onerror = () => ws.close()
     ws.onopen = () => {
-      ws.send(JSON.stringify({ type: 'push_session', session: stripped }))
-      ws.close()
+      try {
+        ws.send(JSON.stringify({ type: 'push_session', session: stripped }))
+      } finally {
+        ws.close()
+      }
     }
-    ws.onerror = () => {}
   } catch {}
 }
 
@@ -26,6 +29,7 @@ export function useCaptureSession() {
   const [session, setSession] = useState<CaptureSession | null>(null)
   const [error, setError] = useState<string | null>(null)
   const portRef = useRef<chrome.runtime.Port | null>(null)
+  const portIntentionalRef = useRef(false)
   const intelligenceRef = useRef<ScreenshotIntelligence | null>(null)
   const annotationCountRef = useRef(0)
 
@@ -65,7 +69,12 @@ export function useCaptureSession() {
     }
 
     chrome.runtime.onMessage.addListener(listener)
-    return () => chrome.runtime.onMessage.removeListener(listener)
+    return () => {
+      chrome.runtime.onMessage.removeListener(listener)
+      portIntentionalRef.current = true
+      portRef.current?.disconnect()
+      portRef.current = null
+    }
   }, [])
 
   const startCapture = useCallback(async () => {
@@ -74,8 +83,10 @@ export function useCaptureSession() {
     annotationCountRef.current = 0
 
     // Establish keep-alive port
+    portIntentionalRef.current = false
     portRef.current = chrome.runtime.connect({ name: 'pointdev-keepalive' })
     portRef.current.onDisconnect.addListener(() => {
+      if (portIntentionalRef.current) return
       // Service worker restarted -- reconnect
       portRef.current = chrome.runtime.connect({ name: 'pointdev-keepalive' })
     })
@@ -84,6 +95,9 @@ export function useCaptureSession() {
     if (response?.type === 'CAPTURE_ERROR') {
       setError(response.error)
       setState('error')
+      portIntentionalRef.current = true
+      portRef.current?.disconnect()
+      portRef.current = null
       return
     }
 
@@ -117,6 +131,7 @@ export function useCaptureSession() {
       setState('complete')
       pushToBridge(response.session)
     }
+    portIntentionalRef.current = true
     portRef.current?.disconnect()
     portRef.current = null
   }, [])
@@ -126,6 +141,9 @@ export function useCaptureSession() {
   }, [])
 
   const reset = useCallback(() => {
+    portIntentionalRef.current = true
+    portRef.current?.disconnect()
+    portRef.current = null
     setState('idle')
     setSession(null)
     setError(null)

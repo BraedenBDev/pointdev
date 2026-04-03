@@ -31,6 +31,8 @@ export function useWhisperRecognition(): UseWhisperRecognitionReturn {
   const workerRef = useRef<Worker | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
+  const processorRef = useRef<ScriptProcessorNode | null>(null)
   const captureStartRef = useRef(0)
 
   const requestMicPermission = useCallback(async () => {
@@ -104,7 +106,9 @@ export function useWhisperRecognition(): UseWhisperRecognitionReturn {
       const audioContext = new AudioContext({ sampleRate: 16000 })
       audioContextRef.current = audioContext
       const source = audioContext.createMediaStreamSource(stream)
+      sourceRef.current = source
       const processor = audioContext.createScriptProcessor(4096, 1, 1)
+      processorRef.current = processor
 
       let audioBuffer: Float32Array[] = []
       const CHUNK_DURATION_MS = 3000
@@ -146,6 +150,14 @@ export function useWhisperRecognition(): UseWhisperRecognitionReturn {
   }, [])
 
   const stop = useCallback(() => {
+    if (processorRef.current) {
+      processorRef.current.disconnect()
+      processorRef.current = null
+    }
+    if (sourceRef.current) {
+      sourceRef.current.disconnect()
+      sourceRef.current = null
+    }
     if (audioContextRef.current) {
       audioContextRef.current.close().catch(() => {})
       audioContextRef.current = null
@@ -162,6 +174,9 @@ export function useWhisperRecognition(): UseWhisperRecognitionReturn {
     setInterimTranscript('')
     setModelState('idle')
   }, [])
+
+  // Clean up all resources on unmount
+  useEffect(() => stop, [])
 
   return {
     isAvailable: typeof Worker !== 'undefined',

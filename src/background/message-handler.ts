@@ -138,10 +138,12 @@ export async function handleMessage(
               this.addEventListener('loadend', () => { if (this.status >= 400 || this.status === 0) requests.push({ method: (this as any).__pd_m || 'GET', url: (this as any).__pd_u || '', status: this.status, statusText: this.statusText || '', timestampMs: ts() }) })
               return origSend.apply(this, a)
             }
-            window.addEventListener('error', (e) => { entries.push({ level: 'error', message: (e.message || 'Uncaught error').slice(0, 500), stack: e.filename ? `${e.filename}:${e.lineno}:${e.colno}` : undefined, timestampMs: ts() }) })
-            window.addEventListener('unhandledrejection', (e) => { entries.push({ level: 'error', message: (e.reason?.message || String(e.reason)).slice(0, 500), stack: e.reason?.stack?.split('\n').slice(0, 3).join('\n'), timestampMs: ts() }) })
+            const onError = (e: ErrorEvent) => { entries.push({ level: 'error', message: (e.message || 'Uncaught error').slice(0, 500), stack: e.filename ? `${e.filename}:${e.lineno}:${e.colno}` : undefined, timestampMs: ts() }) }
+            const onRejection = (e: PromiseRejectionEvent) => { entries.push({ level: 'error', message: (e.reason?.message || String(e.reason)).slice(0, 500), stack: e.reason?.stack?.split('\n').slice(0, 3).join('\n'), timestampMs: ts() }) }
+            window.addEventListener('error', onError)
+            window.addEventListener('unhandledrejection', onRejection)
             const iv = setInterval(() => { if (entries.length || requests.length) document.dispatchEvent(new CustomEvent('pointdev-console-batch', { detail: { entries: entries.splice(0), requests: requests.splice(0) } })) }, 500)
-            document.addEventListener('pointdev-console-stop', () => { console.error = origError; console.warn = origWarn; window.fetch = origFetch; XMLHttpRequest.prototype.open = origOpen; XMLHttpRequest.prototype.send = origSend; clearInterval(iv); if (entries.length || requests.length) document.dispatchEvent(new CustomEvent('pointdev-console-batch', { detail: { entries: entries.splice(0), requests: requests.splice(0) } })) }, { once: true })
+            document.addEventListener('pointdev-console-stop', () => { console.error = origError; console.warn = origWarn; window.fetch = origFetch; XMLHttpRequest.prototype.open = origOpen; XMLHttpRequest.prototype.send = origSend; clearInterval(iv); window.removeEventListener('error', onError); window.removeEventListener('unhandledrejection', onRejection); if (entries.length || requests.length) document.dispatchEvent(new CustomEvent('pointdev-console-batch', { detail: { entries: entries.splice(0), requests: requests.splice(0) } })) }, { once: true })
           },
           args: [Date.now()],
         })

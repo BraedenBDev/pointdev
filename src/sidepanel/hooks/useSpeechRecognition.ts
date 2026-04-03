@@ -180,6 +180,10 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     if (recognitionRef.current) {
       const r = recognitionRef.current
       recognitionRef.current = null
+      r.onresult = null
+      r.onerror = null
+      r.onend = null
+      r.onstart = null
       r.stop()
     }
     setIsListening(false)

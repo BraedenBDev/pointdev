@@ -99,16 +99,16 @@ export function mainWorldCaptureScript(captureStartedAt: number): void {
     return origXHRSend.apply(this, args)
   }
 
-  window.addEventListener('error', (event) => {
+  const onError = (event: ErrorEvent) => {
     entries.push({
       level: 'error',
       message: (event.message || 'Uncaught error').slice(0, 500),
       stack: event.filename ? `${event.filename}:${event.lineno}:${event.colno}` : undefined,
       timestampMs: ts(),
     })
-  })
+  }
 
-  window.addEventListener('unhandledrejection', (event) => {
+  const onRejection = (event: PromiseRejectionEvent) => {
     const msg = event.reason?.message || event.reason?.toString() || 'Unhandled promise rejection'
     entries.push({
       level: 'error',
@@ -116,7 +116,10 @@ export function mainWorldCaptureScript(captureStartedAt: number): void {
       stack: event.reason?.stack?.split('\n').slice(0, 3).join('\n'),
       timestampMs: ts(),
     })
-  })
+  }
+
+  window.addEventListener('error', onError)
+  window.addEventListener('unhandledrejection', onRejection)
 
   // Flush every 500ms
   const interval = setInterval(() => {
@@ -135,6 +138,8 @@ export function mainWorldCaptureScript(captureStartedAt: number): void {
     XMLHttpRequest.prototype.open = origOpen
     XMLHttpRequest.prototype.send = origXHRSend
     clearInterval(interval)
+    window.removeEventListener('error', onError)
+    window.removeEventListener('unhandledrejection', onRejection)
     // Final flush
     if (entries.length > 0 || requests.length > 0) {
       document.dispatchEvent(new CustomEvent('pointdev-console-batch', {
