@@ -103,27 +103,42 @@ export function App() {
   // Preparing + Capturing states (sidepanel stays open for voice)
   return (
     <div className="flex flex-col gap-3">
-      <AppHeader />
+      <div className="flex items-center justify-between">
+        <AppHeader />
+        {state === 'capturing' && (
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 bg-error rounded-full animate-pulse-dot" />
+            <span className="text-[11px] font-medium text-on-surface">Recording</span>
+          </div>
+        )}
+      </div>
+
+      <div className="h-px bg-outline/60" />
 
       {state === 'error' && error && (
-        <div className="p-3 bg-error-container text-on-error-container rounded-md text-sm">
+        <div className="p-3 bg-error-container text-on-error-container rounded-xl text-xs">
           {error}
         </div>
       )}
 
       {state === 'preparing' && (
-        <div className="text-muted text-center py-5">Preparing capture...</div>
+        <div className="text-muted text-center py-8 text-sm">Preparing capture...</div>
       )}
 
       {speech.error && (
-        <div className="p-3 bg-error-container text-on-error-container rounded-md text-sm">
+        <div className="p-3 bg-error-container text-on-error-container rounded-xl text-xs">
           {speech.error}
         </div>
       )}
 
       {state === 'capturing' && engine === 'whisper' && whisper.modelState === 'downloading' && (
-        <div className="text-[11px] text-muted mb-2">
-          Downloading speech model... {Math.round(whisper.downloadProgress * 100)}%
+        <div className="bg-surface-variant/50 rounded-xl p-3">
+          <div className="text-[11px] text-muted">
+            Downloading speech model... {Math.round(whisper.downloadProgress * 100)}%
+          </div>
+          <div className="mt-1.5 h-1 bg-outline/40 rounded-full overflow-hidden">
+            <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${Math.round(whisper.downloadProgress * 100)}%` }} />
+          </div>
         </div>
       )}
 
@@ -135,9 +150,11 @@ export function App() {
       />
 
       {state === 'capturing' && (
-        <div className="p-2 bg-surface-variant rounded-md text-xs">
-          <strong>Transcript{speech.isListening ? ' (live)' : ''}:</strong>
-          <div className="mt-1">
+        <div className="bg-surface-variant/50 rounded-xl p-3">
+          <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-1.5">
+            Transcript{speech.isListening ? ' (live)' : ''}
+          </div>
+          <div className="text-xs text-on-surface-variant leading-relaxed">
             {speech.transcript}
             {speech.interimTranscript && <span className="text-muted"> {speech.interimTranscript}</span>}
             {!speech.transcript && !speech.interimTranscript && (

@@ -26,7 +26,6 @@ const engineDescriptions: Record<SpeechEngine, string> = {
 }
 
 export function IdleView({ engine, onEngineChange, permissions, canCapture, micGranted, onStart, onRequestMic }: IdleViewProps) {
-  // Bind the mic permission action into the permission rows
   const enrichedPermissions = permissions.map(p => {
     if (p.name === 'Microphone' && p.status === 'error') {
       return { ...p, onAction: onRequestMic }
@@ -35,15 +34,14 @@ export function IdleView({ engine, onEngineChange, permissions, canCapture, micG
   })
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       <AppHeader subtitle="v0.2.0" />
 
-      {/* Divider */}
-      <div className="h-px bg-outline" />
+      <div className="h-px bg-outline/60" />
 
       {/* Voice Engine */}
-      <div>
-        <div className="text-[11px] font-medium text-muted uppercase tracking-wider mb-2">
+      <div className="bg-surface-variant/50 rounded-xl p-3">
+        <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-2">
           Voice Engine
         </div>
         <SegmentedButton
@@ -51,17 +49,17 @@ export function IdleView({ engine, onEngineChange, permissions, canCapture, micG
           value={engine}
           onChange={(v) => onEngineChange(v as SpeechEngine)}
         />
-        <div className="text-[10px] text-muted mt-1.5">
+        <div className="text-[10px] text-muted mt-2 leading-relaxed">
           {engineDescriptions[engine]}
         </div>
       </div>
 
       {/* Status */}
       <div>
-        <div className="text-[11px] font-medium text-muted uppercase tracking-wider mb-2">
+        <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-2 px-1">
           Status
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-[5px]">
           {enrichedPermissions.map((perm) => (
             <PermissionRow key={perm.name} {...perm} />
           ))}
@@ -73,21 +71,26 @@ export function IdleView({ engine, onEngineChange, permissions, canCapture, micG
         size="full"
         onClick={onStart}
         disabled={!canCapture}
+        className="mt-1"
       >
         Start Capture
       </Button>
 
       {/* Warnings */}
       {!canCapture && (
-        <div className="text-[10px] text-error leading-relaxed">
+        <div className="text-[10px] text-error leading-relaxed px-1 -mt-2">
           Cannot capture on this page. Navigate to a regular webpage.
         </div>
       )}
       {canCapture && !micGranted && (
-        <div className="text-[10px] text-warning leading-relaxed">
-          Voice narration unavailable — mic access needed. Capture will work without voice.
+        <div className="text-[10px] text-warning leading-relaxed px-1 -mt-2">
+          ⚠ Voice narration unavailable — mic access needed.
         </div>
       )}
+
+      <div className="text-[10px] text-muted leading-relaxed px-1">
+        Talk, draw, and click on the page to capture structured context for your AI coding tool.
+      </div>
     </div>
   )
 }

@@ -21,6 +21,7 @@ interface OutputViewProps {
 
 export function OutputView({ session, onBack }: OutputViewProps) {
   const [format, setFormat] = useState<OutputFormat>('text')
+  const [copied, setCopied] = useState(false)
 
   const sessionWithDwells = useMemo(() => ({
     ...session,
@@ -46,6 +47,8 @@ export function OutputView({ session, onBack }: OutputViewProps) {
       document.execCommand('copy')
       document.body.removeChild(ta)
     }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   const durationMs = session.cursorTrace.length > 0
@@ -60,21 +63,21 @@ export function OutputView({ session, onBack }: OutputViewProps) {
         subtitle={`${session.url.replace(/^https?:\/\//, '').split('/')[0]} · ${durationSec}s · ${session.voiceRecording?.segments.length ?? 0} segments`}
       />
 
-      <div className="h-px bg-outline" />
+      <div className="h-px bg-outline/60" />
 
       {/* Stats row */}
-      <div className="grid grid-cols-3 gap-1.5">
-        <div className="p-2 bg-surface border border-outline rounded-md text-center">
-          <div className="text-base font-semibold text-on-surface">{session.annotations.length}</div>
-          <div className="text-[9px] text-muted">Annotations</div>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="py-2.5 px-2 bg-surface-variant/50 border border-outline/40 rounded-xl text-center">
+          <div className="text-lg font-semibold text-on-surface leading-tight">{session.annotations.length}</div>
+          <div className="text-[9px] text-muted mt-0.5">Annotations</div>
         </div>
-        <div className="p-2 bg-surface border border-outline rounded-md text-center">
-          <div className="text-base font-semibold text-on-surface">{session.screenshots.length}</div>
-          <div className="text-[9px] text-muted">Screenshots</div>
+        <div className="py-2.5 px-2 bg-surface-variant/50 border border-outline/40 rounded-xl text-center">
+          <div className="text-lg font-semibold text-on-surface leading-tight">{session.screenshots.length}</div>
+          <div className="text-[9px] text-muted mt-0.5">Screenshots</div>
         </div>
-        <div className="p-2 bg-surface border border-outline rounded-md text-center">
-          <div className="text-base font-semibold text-on-surface">{session.voiceRecording?.segments.length ?? 0}</div>
-          <div className="text-[9px] text-muted">Voice seg.</div>
+        <div className="py-2.5 px-2 bg-surface-variant/50 border border-outline/40 rounded-xl text-center">
+          <div className="text-lg font-semibold text-on-surface leading-tight">{session.voiceRecording?.segments.length ?? 0}</div>
+          <div className="text-[9px] text-muted mt-0.5">Voice seg.</div>
         </div>
       </div>
 
@@ -87,7 +90,7 @@ export function OutputView({ session, onBack }: OutputViewProps) {
 
       {/* Output code block */}
       <ScrollArea className="max-h-[40vh]">
-        <pre className="bg-code-bg text-code-text font-mono text-[10px] leading-relaxed p-3 rounded-md whitespace-pre-wrap break-words">
+        <pre className="bg-code-bg text-code-text font-mono text-[10px] leading-[1.7] p-3.5 rounded-xl whitespace-pre-wrap break-words">
           {output}
         </pre>
       </ScrollArea>
@@ -95,10 +98,10 @@ export function OutputView({ session, onBack }: OutputViewProps) {
       {/* Screenshots */}
       {session.screenshots.length > 0 && (
         <div>
-          <div className="text-[11px] font-medium text-muted uppercase tracking-wider mb-1.5">
+          <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-2 px-1">
             Screenshots
           </div>
-          <div className="flex gap-1.5 overflow-x-auto pb-2">
+          <div className="flex gap-2 overflow-x-auto pb-2">
             {session.screenshots.map((ss, i) => (
               <ScreenshotThumbnail key={i} screenshot={ss} size="small" />
             ))}
@@ -107,16 +110,16 @@ export function OutputView({ session, onBack }: OutputViewProps) {
       )}
 
       {/* Actions */}
-      <div className="flex gap-1.5">
+      <div className="flex gap-2">
         <Button size="full" onClick={handleCopy}>
-          Copy {format === 'text' ? '' : format.toUpperCase() + ' '}to Clipboard
+          {copied ? 'Copied!' : `Copy ${format === 'text' ? '' : format.toUpperCase() + ' '}to Clipboard`}
         </Button>
-        <Button variant="outline" onClick={onBack} className="shrink-0">
+        <Button variant="outline" onClick={onBack} className="shrink-0 px-5">
           New
         </Button>
       </div>
 
-      <div className="text-[10px] text-muted">
+      <div className="text-[10px] text-muted px-1 pb-1">
         Tip: Run <code className="font-mono text-primary">npx @pointdev/bridge</code> to stream sessions to AI tools via MCP
       </div>
     </div>

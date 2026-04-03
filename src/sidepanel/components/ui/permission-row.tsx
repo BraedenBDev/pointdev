@@ -14,13 +14,13 @@ export function PermissionRow({ name, status, label, action, onAction }: Permiss
   return (
     <div
       className={cn(
-        "flex items-center gap-2 px-2.5 py-1.5 rounded-lg border",
-        isError ? "bg-error-container border-error/20" : "bg-surface border-outline"
+        "flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-colors",
+        isError ? "bg-error-container border-error/20" : "bg-surface border-outline/60"
       )}
     >
       <div
         className={cn(
-          "w-1.5 h-1.5 rounded-full shrink-0",
+          "w-[6px] h-[6px] rounded-full shrink-0",
           isError ? "bg-error" : "bg-primary"
         )}
       />

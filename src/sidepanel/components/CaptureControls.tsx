@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { CaptureMode } from '@shared/messages'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 interface CaptureControlsProps {
   isCapturing: boolean
@@ -35,18 +36,21 @@ export function CaptureControls({ isCapturing, onStart, onStop, onModeChange }: 
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex gap-1">
+      <div className="flex gap-[5px] bg-surface-variant/50 rounded-xl p-[3px]">
         {modes.map(({ mode: m, label, icon }) => (
-          <Button
+          <button
             key={m}
-            variant={mode === m ? 'default' : 'tonal'}
-            size="sm"
             onClick={() => handleModeChange(m)}
             title={label}
-            className="flex-1 text-xs"
+            className={cn(
+              "flex-1 py-[6px] text-center text-[10px] font-medium rounded-[9px] transition-all cursor-pointer border-none",
+              mode === m
+                ? "bg-primary text-on-primary shadow-sm"
+                : "bg-transparent text-muted hover:text-on-surface-variant"
+            )}
           >
             {m === 'select' ? label : icon}
-          </Button>
+          </button>
         ))}
       </div>
       <Button variant="destructive" size="full" onClick={onStop}>
