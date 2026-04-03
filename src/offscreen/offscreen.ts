@@ -163,6 +163,7 @@ async function startWhisper() {
       })
     } else if (msg.type === 'error') {
       chrome.runtime.sendMessage({ type: 'VOICE_ERROR', error: msg.error })
+      stopVoice()
     }
   }
 

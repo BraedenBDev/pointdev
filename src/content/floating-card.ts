@@ -256,7 +256,7 @@ function buildCardDOM(): DocumentFragment {
   transcriptIcon.className = 'transcript-icon'
   transcriptIcon.textContent = '\uD83C\uDF99'
   transcript.appendChild(transcriptIcon)
-  transcript.appendChild(document.createTextNode(' Listening...'))
+  transcript.appendChild(document.createTextNode(' Waiting for speech...'))
   body.appendChild(transcript)
 
   const stopArea = document.createElement('div')
@@ -412,20 +412,19 @@ export class FloatingCard {
   }
 
   updateStats(annotationCount: number, screenshotCount: number): void {
-    // Clear existing content safely
     this.statsEl.textContent = ''
 
-    const listening = document.createElement('span')
-    listening.textContent = '\uD83C\uDF99 Listening...'
-    this.statsEl.appendChild(listening)
+    const mic = document.createElement('span')
+    mic.textContent = '\uD83C\uDF99 Active'
+    this.statsEl.appendChild(mic)
 
     const ann = document.createElement('span')
     ann.textContent = `${annotationCount} ann.`
     this.statsEl.appendChild(ann)
 
-    const screenshots = document.createElement('span')
-    screenshots.textContent = `${screenshotCount} screenshots`
-    this.statsEl.appendChild(screenshots)
+    const ss = document.createElement('span')
+    ss.textContent = `${screenshotCount} screenshots`
+    this.statsEl.appendChild(ss)
   }
 
   updateTranscript(text: string): void {
