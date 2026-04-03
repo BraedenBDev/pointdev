@@ -261,6 +261,8 @@ Screenshots are only captured during active capture sessions you explicitly star
 - [ ] Accessibility capture (ARIA roles, names) ([#23](https://github.com/BraedenBDev/pointdev/issues/23))
 - [ ] Multi-element selection ([#13](https://github.com/BraedenBDev/pointdev/issues/13))
 - [ ] Vue and Svelte component detection ([#9](https://github.com/BraedenBDev/pointdev/issues/9))
+- [ ] Shareable captures across tools and teams ([#37](https://github.com/BraedenBDev/pointdev/issues/37))
+- [ ] Simplified capture mode for non-technical users ([#38](https://github.com/BraedenBDev/pointdev/issues/38))
 
 See all [open issues](https://github.com/BraedenBDev/pointdev/issues) for the full backlog.
 

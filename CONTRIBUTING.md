@@ -22,9 +22,8 @@ Changes to sidepanel code may hot-reload. Changes to the content script or servi
 ## Testing
 
 ```bash
-bun test              # Run unit tests (Vitest)
-bunx vitest run       # Same thing, explicit
-bun test:watch        # Watch mode
+bun run test          # Run unit tests (Vitest)
+bun run test:watch    # Watch mode
 ```
 
 Extension integration testing is manual: load the unpacked extension and test on various web pages. There is no automated E2E test harness for the extension itself.
