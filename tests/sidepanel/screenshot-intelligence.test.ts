@@ -50,8 +50,10 @@ describe('computeInterestScore', () => {
     expect(score).toBeCloseTo(0.25, 2)
   })
 
-  it('voice alone exceeds interest threshold (0.4) — no capture', () => {
+  it('voice alone does not exceed interest threshold (0.4) without other signals', () => {
     const score = computeInterestScore(makeSignals({ voiceActive: true }))
+    // Voice weight is 0.35, below 0.4 — needs frame diff or dwell to trigger
+    expect(score).toBeCloseTo(0.35, 2)
     expect(score).toBeLessThan(0.4)
   })
 

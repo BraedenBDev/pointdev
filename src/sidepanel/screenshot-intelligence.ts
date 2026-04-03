@@ -41,7 +41,6 @@ export class ScreenshotIntelligence {
   private canvas: OffscreenCanvas
   private ctx: OffscreenCanvasRenderingContext2D
   private prevFrameData: Uint8ClampedArray | null = null
-  private frameBuffer: Uint8ClampedArray | null = null
   private intervalId: number | null = null
   private captureStartedAt = 0
 
@@ -68,7 +67,7 @@ export class ScreenshotIntelligence {
 
   start(captureStartedAt: number): void {
     this.captureStartedAt = captureStartedAt
-    this.intervalId = window.setInterval(() => this.sampleFrame(), SAMPLE_INTERVAL_MS)
+    this.intervalId = window.setInterval(() => this.sampleFrame().catch(() => {}), SAMPLE_INTERVAL_MS)
   }
 
   stop(): void {
@@ -77,7 +76,6 @@ export class ScreenshotIntelligence {
       this.intervalId = null
     }
     this.prevFrameData = null
-    this.frameBuffer = null
     this._lastFinalSegment = ''
     this._lastFinalSegmentTime = 0
   }
@@ -90,12 +88,14 @@ export class ScreenshotIntelligence {
       this._lastFinalSegment = segment
       this._lastFinalSegmentTime = Date.now()
     } else if (!active) {
-      // Voice went silent — keep last segment for a retention window
-      // so screenshots captured shortly after speech carry context
+      // Voice went silent — keep active + segment for a retention window
+      // so screenshots captured shortly after speech still trigger
       const elapsed = Date.now() - this._lastFinalSegmentTime
-      if (elapsed < ScreenshotIntelligence.VOICE_CONTEXT_RETENTION_MS) {
+      if (this._lastFinalSegmentTime > 0 && elapsed < ScreenshotIntelligence.VOICE_CONTEXT_RETENTION_MS) {
+        this._voiceActive = true
         this._voiceSegment = this._lastFinalSegment
       } else {
+        this._voiceActive = false
         this._voiceSegment = ''
       }
     }
@@ -133,19 +133,25 @@ export class ScreenshotIntelligence {
     }
 
     // Decode the data URL into pixel data at low resolution
-    const img = await createImageBitmap(await (await fetch(dataUrl)).blob())
+    // Use direct base64→blob instead of fetch(dataUrl) which can fail in extension pages
+    const [header, b64] = dataUrl.split(',')
+    const mime = header.match(/:(.*?);/)?.[1] ?? 'image/jpeg'
+    const binary = atob(b64)
+    const bytes = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+    const img = await createImageBitmap(new Blob([bytes], { type: mime }))
     this.ctx.drawImage(img, 0, 0, SAMPLE_WIDTH, SAMPLE_HEIGHT)
     img.close()
     const { data } = this.ctx.getImageData(0, 0, SAMPLE_WIDTH, SAMPLE_HEIGHT)
 
     const frameDiffRatio = this.computeFrameDiff(data)
 
-    // Reuse buffer to avoid allocation every frame
-    if (!this.frameBuffer) {
-      this.frameBuffer = new Uint8ClampedArray(data.length)
+    // Store current frame as previous for next diff comparison
+    if (!this.prevFrameData || this.prevFrameData.length !== data.length) {
+      this.prevFrameData = new Uint8ClampedArray(data)
+    } else {
+      this.prevFrameData.set(data)
     }
-    this.frameBuffer.set(data)
-    this.prevFrameData = this.frameBuffer
 
     const signals: InterestSignals = {
       frameDiffRatio,
