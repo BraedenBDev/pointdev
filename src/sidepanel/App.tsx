@@ -31,6 +31,8 @@ export function App() {
   const handleStart = async () => {
     captureStartRef.current = Date.now()
     await startCapture()
+    // Close sidepanel — floating card takes over during capture
+    window.close()
   }
 
   const handleStop = async () => {

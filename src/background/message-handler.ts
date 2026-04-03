@@ -117,6 +117,8 @@ export async function handleMessage(
             justification: 'Voice recognition for capture session',
           })
         }
+        // Wait for offscreen doc script to load
+        await new Promise(r => setTimeout(r, 300))
         // Get engine preference from storage
         const { pointdev_voice_engine } = await chrome.storage.local.get('pointdev_voice_engine')
         // Start voice in offscreen doc
@@ -197,6 +199,11 @@ export async function handleMessage(
       resetDwellDetector()
       const finalSession = store.endSession()!
       console.log('[PointDev] CAPTURE_COMPLETE: screenshots=', finalSession.screenshots.length, 'annotations=', finalSession.annotations.length)
+
+      // Store completed session so sidepanel can pick it up when it reopens
+      try {
+        await chrome.storage.session.set({ completedSession: finalSession })
+      } catch {}
 
       // Reopen sidepanel with results
       try {

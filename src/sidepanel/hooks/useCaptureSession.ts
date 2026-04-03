@@ -33,6 +33,17 @@ export function useCaptureSession() {
   const intelligenceRef = useRef<ScreenshotIntelligence | null>(null)
   const annotationCountRef = useRef(0)
 
+  // Check for a completed session left by the service worker (sidepanel was closed during capture)
+  useEffect(() => {
+    chrome.storage.session.get(['completedSession']).then(({ completedSession }) => {
+      if (completedSession) {
+        setSession(completedSession)
+        setState('complete')
+        chrome.storage.session.remove(['completedSession'])
+      }
+    }).catch(() => {})
+  }, [])
+
   useEffect(() => {
     const listener = (message: Message) => {
       if (message.type === 'SESSION_UPDATED') {
