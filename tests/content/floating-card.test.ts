@@ -35,24 +35,18 @@ describe('FloatingCard', () => {
     expect(document.body.querySelector('[data-pointdev-float]')).toBeNull()
   })
 
-  it('setMode updates active button', () => {
+  it('setMode does not throw', () => {
     card.show(Date.now())
-    card.setMode('arrow')
-    // Verify the mode was set (internal state)
-    // We can't easily inspect Shadow DOM in tests but we can verify no errors
-    expect(true).toBe(true)
+    expect(() => card.setMode('arrow')).not.toThrow()
   })
 
-  it('updateTranscript updates the transcript element', () => {
+  it('updateTranscript does not throw', () => {
     card.show(Date.now())
-    card.updateTranscript('testing testing 1 2 3')
-    // No error = success (Shadow DOM inspection limited in jsdom)
-    expect(true).toBe(true)
+    expect(() => card.updateTranscript('testing testing 1 2 3')).not.toThrow()
   })
 
-  it('updateStats updates counts', () => {
+  it('updateStats does not throw', () => {
     card.show(Date.now())
-    card.updateStats(3, 5)
-    expect(true).toBe(true)
+    expect(() => card.updateStats(3, 5)).not.toThrow()
   })
 })
