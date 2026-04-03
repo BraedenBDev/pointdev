@@ -3,6 +3,7 @@ import { useCaptureSession } from './hooks/useCaptureSession'
 import { useSpeechRecognition } from './hooks/useSpeechRecognition'
 import { useWhisperRecognition } from './hooks/useWhisperRecognition'
 import { usePermissionStatus } from './hooks/usePermissionStatus'
+import { AppHeader } from '@/components/ui/app-header'
 import { IdleView } from './components/IdleView'
 import { CaptureControls } from './components/CaptureControls'
 import { LiveFeedback } from './components/LiveFeedback'
@@ -59,10 +60,7 @@ export function App() {
     if (!hasContent) {
       return (
         <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center text-on-primary text-xs font-bold">P</div>
-            <div className="text-[15px] font-semibold text-on-surface">PointDev</div>
-          </div>
+          <AppHeader />
           <div className="p-3 bg-error-container text-on-error-container rounded-md text-sm">
             No context captured. Try selecting an element or recording your voice.
           </div>

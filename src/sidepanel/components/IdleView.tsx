@@ -1,3 +1,4 @@
+import { AppHeader } from '@/components/ui/app-header'
 import { Button } from '@/components/ui/button'
 import { SegmentedButton } from '@/components/ui/segmented-button'
 import { PermissionRow, type PermissionRowProps } from '@/components/ui/permission-row'
@@ -35,16 +36,7 @@ export function IdleView({ engine, onEngineChange, permissions, canCapture, micG
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Header */}
-      <div className="flex items-center gap-2 pb-1">
-        <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center text-on-primary text-xs font-bold">
-          P
-        </div>
-        <div>
-          <div className="text-[15px] font-semibold text-on-surface">PointDev</div>
-          <div className="text-[10px] text-muted">v0.2.0</div>
-        </div>
-      </div>
+      <AppHeader subtitle="v0.2.0" />
 
       {/* Divider */}
       <div className="h-px bg-outline" />

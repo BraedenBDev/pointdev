@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { CaptureSession, OutputFormat } from '@shared/types'
 import { formatSession, formatSessionJSON, formatSessionMarkdown } from '@shared/formatter'
 import { computeDwells, collapseDwells } from '@shared/dwell'
+import { AppHeader } from '@/components/ui/app-header'
 import { Button } from '@/components/ui/button'
 import { SegmentedButton } from '@/components/ui/segmented-button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -54,18 +55,10 @@ export function OutputView({ session, onBack }: OutputViewProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center text-on-primary text-xs font-bold">
-          P
-        </div>
-        <div>
-          <div className="text-[15px] font-semibold text-on-surface">Capture Complete</div>
-          <div className="text-[10px] text-muted">
-            {session.url.replace(/^https?:\/\//, '').split('/')[0]} · {durationSec}s · {session.voiceRecording?.segments.length ?? 0} segments
-          </div>
-        </div>
-      </div>
+      <AppHeader
+        title="Capture Complete"
+        subtitle={`${session.url.replace(/^https?:\/\//, '').split('/')[0]} · ${durationSec}s · ${session.voiceRecording?.segments.length ?? 0} segments`}
+      />
 
       <div className="h-px bg-outline" />
 
@@ -94,7 +87,7 @@ export function OutputView({ session, onBack }: OutputViewProps) {
 
       {/* Output code block */}
       <ScrollArea className="max-h-[40vh]">
-        <pre className="bg-code-bg text-[#a7f3d0] font-mono text-[10px] leading-relaxed p-3 rounded-md whitespace-pre-wrap break-words">
+        <pre className="bg-code-bg text-code-text font-mono text-[10px] leading-relaxed p-3 rounded-md whitespace-pre-wrap break-words">
           {output}
         </pre>
       </ScrollArea>
