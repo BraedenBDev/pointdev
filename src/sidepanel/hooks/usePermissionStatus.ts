@@ -46,12 +46,20 @@ export function usePermissionStatus() {
       })
 
       // Active Tab — check if current tab is capturable
+      // activeTab doesn't populate url in tabs.query — use tabs.get for the full object
       let tabOk = false
       try {
         const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
         const tab = tabs[0]
-        if (tab?.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://') && !tab.url.startsWith('about:')) {
-          tabOk = true
+        if (tab?.id) {
+          const fullTab = await chrome.tabs.get(tab.id)
+          const url = fullTab.url || ''
+          if (url && !url.startsWith('chrome://') && !url.startsWith('chrome-extension://') && !url.startsWith('about:')) {
+            tabOk = true
+          } else if (!url) {
+            // URL not available — assume capturable (will fail gracefully if not)
+            tabOk = true
+          }
         }
       } catch {
         // tabs API not available

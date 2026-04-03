@@ -6,6 +6,7 @@ import { usePermissionStatus } from '../../../src/sidepanel/hooks/usePermissionS
 const mockChrome = {
   tabs: {
     query: vi.fn(),
+    get: vi.fn(),
   },
   runtime: {
     sendMessage: vi.fn(),
@@ -27,7 +28,8 @@ describe('usePermissionStatus', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockPermissions.query.mockResolvedValue({ state: 'granted' })
-    mockChrome.tabs.query.mockResolvedValue([{ url: 'https://example.com' }])
+    mockChrome.tabs.query.mockResolvedValue([{ id: 1, url: 'https://example.com' }])
+    mockChrome.tabs.get.mockResolvedValue({ id: 1, url: 'https://example.com' })
     mockChrome.runtime.sendMessage.mockResolvedValue({ type: 'PONG' })
   })
 
@@ -48,7 +50,8 @@ describe('usePermissionStatus', () => {
   })
 
   it('reports canCapture false on chrome:// pages', async () => {
-    mockChrome.tabs.query.mockResolvedValue([{ url: 'chrome://extensions' }])
+    mockChrome.tabs.query.mockResolvedValue([{ id: 2, url: 'chrome://extensions' }])
+    mockChrome.tabs.get.mockResolvedValue({ id: 2, url: 'chrome://extensions' })
     const { result } = renderHook(() => usePermissionStatus())
     await waitFor(() => {
       expect(result.current.permissions).toHaveLength(5)
