@@ -4,9 +4,6 @@ import { ScreenshotThumbnail } from './ScreenshotThumbnail'
 
 interface LiveFeedbackProps {
   session: CaptureSession | null
-  isListening: boolean
-  interimTranscript: string
-  transcript: string
   captureStartedAt: number
 }
 
@@ -19,7 +16,7 @@ function annotationIcon(type: string): string {
   }
 }
 
-export function LiveFeedback({ session, isListening, interimTranscript, transcript, captureStartedAt }: LiveFeedbackProps) {
+export function LiveFeedback({ session, captureStartedAt }: LiveFeedbackProps) {
   const [elapsed, setElapsed] = useState(0)
 
   useEffect(() => {
@@ -73,11 +70,10 @@ export function LiveFeedback({ session, isListening, interimTranscript, transcri
       )}
 
       <div className="p-2 bg-surface-variant rounded-md text-xs">
-        <strong>Transcript{isListening ? ' (live)' : ''}:</strong>
+        <strong>Transcript (live):</strong>
         <div className="mt-1">
-          {transcript}
-          {interimTranscript && <span className="text-muted">{interimTranscript}</span>}
-          {!transcript && !interimTranscript && (
+          {session?.voiceRecording?.segments.map(s => s.text).join(' ')}
+          {!session?.voiceRecording?.segments.length && (
             <span className="text-muted italic">Speak to add voice context...</span>
           )}
         </div>

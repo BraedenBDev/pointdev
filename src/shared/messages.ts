@@ -31,6 +31,13 @@ export type Message =
   | { type: 'SNAPSHOT_REQUEST' }
   | { type: 'SMART_SCREENSHOT_REQUEST'; data: SmartScreenshotSignals }
 
+  // Offscreen Document ↔ Service Worker
+  | { type: 'VOICE_START'; engine: 'web-speech' | 'whisper'; captureStartedAt: number }
+  | { type: 'VOICE_STOP' }
+  | { type: 'VOICE_ERROR'; error: string }
+  | { type: 'WHISPER_PROGRESS'; progress: number }
+  | { type: 'WHISPER_READY' }
+
   // Service Worker → Sidepanel
   | { type: 'SESSION_UPDATED'; session: CaptureSession }
   | { type: 'CAPTURE_COMPLETE'; session: CaptureSession }

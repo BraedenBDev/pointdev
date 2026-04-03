@@ -1,7 +1,5 @@
 import { useRef, useEffect, useState } from 'react'
 import { useCaptureSession } from './hooks/useCaptureSession'
-import { useSpeechRecognition } from './hooks/useSpeechRecognition'
-import { useWhisperRecognition } from './hooks/useWhisperRecognition'
 import { usePermissionStatus } from './hooks/usePermissionStatus'
 import { AppHeader } from '@/components/ui/app-header'
 import { IdleView } from './components/IdleView'
@@ -13,43 +11,29 @@ import { Button } from '@/components/ui/button'
 type SpeechEngine = 'web-speech' | 'whisper'
 
 export function App() {
-  const { state, session, error, startCapture, stopCapture, setMode, reset, setVoiceSignal } = useCaptureSession()
+  const { state, session, error, startCapture, stopCapture, setMode, reset } = useCaptureSession()
   const [engine, setEngine] = useState<SpeechEngine>('web-speech')
-  const webSpeech = useSpeechRecognition()
-  const whisper = useWhisperRecognition()
-  const speech = engine === 'whisper' ? whisper : webSpeech
   const { permissions, canCapture, micGranted, requestMicPermission } = usePermissionStatus()
   const captureStartRef = useRef(0)
 
-  const lastSegmentCountRef = useRef(0)
+  // Persist engine preference to storage (offscreen doc reads it)
   useEffect(() => {
-    if (state !== 'capturing') return
+    chrome.storage.local.set({ pointdev_voice_engine: engine })
+  }, [engine])
 
-    if (speech.segments.length > lastSegmentCountRef.current) {
-      const newSegment = speech.segments[speech.segments.length - 1]
-      chrome.runtime.sendMessage({
-        type: 'TRANSCRIPT_UPDATE',
-        data: { transcript: speech.transcript, segment: newSegment },
-      })
-      lastSegmentCountRef.current = speech.segments.length
-      setVoiceSignal(true, newSegment.text)
-      return
-    }
-
-    setVoiceSignal(speech.interimTranscript.length > 0, speech.interimTranscript)
-  }, [speech.segments, speech.transcript, speech.interimTranscript, state, setVoiceSignal])
+  // Load initial engine preference from storage
+  useEffect(() => {
+    chrome.storage.local.get('pointdev_voice_engine').then(({ pointdev_voice_engine }) => {
+      if (pointdev_voice_engine) setEngine(pointdev_voice_engine)
+    }).catch(() => {})
+  }, [])
 
   const handleStart = async () => {
     captureStartRef.current = Date.now()
-    lastSegmentCountRef.current = 0
     await startCapture()
-    if (speech.isAvailable) {
-      speech.start(captureStartRef.current)
-    }
   }
 
   const handleStop = async () => {
-    speech.stop()
     await stopCapture()
   }
 
@@ -104,12 +88,6 @@ export function App() {
         <div className="text-muted text-center py-5">Preparing capture...</div>
       )}
 
-      {speech.error && (
-        <div className="p-3 bg-error-container text-on-error-container rounded-md text-sm">
-          {speech.error}
-        </div>
-      )}
-
       <CaptureControls
         isCapturing={state === 'capturing'}
         onStart={handleStart}
@@ -117,18 +95,9 @@ export function App() {
         onModeChange={setMode}
       />
 
-      {state === 'capturing' && engine === 'whisper' && whisper.modelState === 'downloading' && (
-        <div className="text-[11px] text-muted mb-2">
-          Downloading speech model... {Math.round(whisper.downloadProgress * 100)}%
-        </div>
-      )}
-
       {state === 'capturing' && (
         <LiveFeedback
           session={session}
-          isListening={speech.isListening}
-          interimTranscript={speech.interimTranscript}
-          transcript={speech.transcript}
           captureStartedAt={captureStartRef.current}
         />
       )}

@@ -104,6 +104,31 @@ export async function handleMessage(
       // Reset dwell detector for new session
       resetDwellDetector()
 
+      // Create offscreen document for voice recognition
+      try {
+        // Check if offscreen document already exists
+        const contexts = await (chrome.runtime as any).getContexts({
+          contextTypes: ['OFFSCREEN_DOCUMENT'],
+        })
+        if (!contexts || contexts.length === 0) {
+          await (chrome as any).offscreen.createDocument({
+            url: 'src/offscreen/offscreen.html',
+            reasons: ['USER_MEDIA' as any, 'WORKERS' as any],
+            justification: 'Voice recognition for capture session',
+          })
+        }
+        // Get engine preference from storage
+        const { pointdev_voice_engine } = await chrome.storage.local.get('pointdev_voice_engine')
+        // Start voice in offscreen doc
+        chrome.runtime.sendMessage({
+          type: 'VOICE_START',
+          engine: pointdev_voice_engine || 'web-speech',
+          captureStartedAt: Date.now(),
+        }).catch(() => {})
+      } catch (err) {
+        console.error('[PointDev] Failed to create offscreen document:', err)
+      }
+
       // Inject console/network capture into the page's main world
       try {
         await chrome.scripting.executeScript({
@@ -157,6 +182,14 @@ export async function handleMessage(
     case 'STOP_CAPTURE': {
       const session = store.getSession()
       if (!session) return { type: 'CAPTURE_ERROR', error: 'No active capture session' }
+
+      // Stop voice and destroy offscreen document
+      try {
+        await chrome.runtime.sendMessage({ type: 'VOICE_STOP' }).catch(() => {})
+        await (chrome as any).offscreen.closeDocument()
+      } catch {
+        // Offscreen doc may not exist
+      }
 
       // Remove overlay from the page (content script may already be gone)
       await chrome.tabs.sendMessage(session.tabId, { type: 'REMOVE_CAPTURE' }).catch(() => {})
@@ -357,6 +390,21 @@ export async function handleMessage(
 
     case 'CONSOLE_BATCH': {
       store.addConsoleBatch(message.data.entries, message.data.requests)
+      return undefined
+    }
+
+    case 'VOICE_ERROR': {
+      console.error('[PointDev] Voice error:', message.error)
+      return undefined
+    }
+
+    case 'WHISPER_PROGRESS': {
+      console.log('[PointDev] Whisper download:', Math.round(message.progress * 100) + '%')
+      return undefined
+    }
+
+    case 'WHISPER_READY': {
+      console.log('[PointDev] Whisper model ready')
       return undefined
     }
 

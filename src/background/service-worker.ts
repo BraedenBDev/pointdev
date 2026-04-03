@@ -19,6 +19,7 @@ const HANDLED_TYPES = new Set([
   'CURSOR_BATCH', 'DEVICE_METADATA', 'SCREENSHOT_REQUEST',
   'SMART_SCREENSHOT_REQUEST', 'SNAPSHOT_REQUEST',
   'CONSOLE_BATCH',
+  'VOICE_ERROR', 'WHISPER_PROGRESS', 'WHISPER_READY',
 ])
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
