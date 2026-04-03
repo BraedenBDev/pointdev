@@ -104,32 +104,8 @@ export async function handleMessage(
       // Reset dwell detector for new session
       resetDwellDetector()
 
-      // Create offscreen document for voice recognition
-      try {
-        // Close any existing offscreen document first
-        try {
-          await (chrome as any).offscreen.closeDocument()
-        } catch {
-          // No existing document — that's fine
-        }
-        await (chrome as any).offscreen.createDocument({
-          url: 'src/offscreen/offscreen.html',
-          reasons: ['USER_MEDIA' as any, 'WORKERS' as any],
-          justification: 'Voice recognition for capture session',
-        })
-        // Wait for offscreen doc script to load
-        await new Promise(r => setTimeout(r, 300))
-        // Get engine preference from storage
-        const { pointdev_voice_engine } = await chrome.storage.local.get('pointdev_voice_engine')
-        // Start voice in offscreen doc
-        chrome.runtime.sendMessage({
-          type: 'VOICE_START',
-          engine: pointdev_voice_engine || 'web-speech',
-          captureStartedAt: Date.now(),
-        }).catch(() => {})
-      } catch (err) {
-        console.error('[PointDev] Failed to create offscreen document:', err)
-      }
+      // Voice recognition runs in the sidepanel (stays open during capture)
+      // Offscreen doc approach disabled — Chrome doesn't transfer mic permission to offscreen contexts
 
       // Inject console/network capture into the page's main world
       try {
@@ -185,13 +161,7 @@ export async function handleMessage(
       const session = store.getSession()
       if (!session) return { type: 'CAPTURE_ERROR', error: 'No active capture session' }
 
-      // Stop voice and destroy offscreen document
-      try {
-        await chrome.runtime.sendMessage({ type: 'VOICE_STOP' }).catch(() => {})
-        await (chrome as any).offscreen.closeDocument()
-      } catch {
-        // Offscreen doc may not exist
-      }
+      // Voice is stopped by the sidepanel (App.tsx handleStop calls speech.stop())
 
       // Remove overlay from the page (content script may already be gone)
       await chrome.tabs.sendMessage(session.tabId, { type: 'REMOVE_CAPTURE' }).catch(() => {})

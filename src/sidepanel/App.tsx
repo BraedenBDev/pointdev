@@ -1,5 +1,7 @@
 import { useRef, useEffect, useState } from 'react'
 import { useCaptureSession } from './hooks/useCaptureSession'
+import { useSpeechRecognition } from './hooks/useSpeechRecognition'
+import { useWhisperRecognition } from './hooks/useWhisperRecognition'
 import { usePermissionStatus } from './hooks/usePermissionStatus'
 import { AppHeader } from '@/components/ui/app-header'
 import { IdleView } from './components/IdleView'
@@ -11,31 +13,57 @@ import { Button } from '@/components/ui/button'
 type SpeechEngine = 'web-speech' | 'whisper'
 
 export function App() {
-  const { state, session, error, startCapture, stopCapture, setMode, reset } = useCaptureSession()
+  const { state, session, error, startCapture, stopCapture, setMode, reset, setVoiceSignal } = useCaptureSession()
   const [engine, setEngine] = useState<SpeechEngine>('web-speech')
+  const webSpeech = useSpeechRecognition()
+  const whisper = useWhisperRecognition()
+  const speech = engine === 'whisper' ? whisper : webSpeech
   const { permissions, canCapture, micGranted, requestMicPermission } = usePermissionStatus()
   const captureStartRef = useRef(0)
 
-  // Persist engine preference to storage (offscreen doc reads it)
+  // Persist engine preference
   useEffect(() => {
     chrome.storage.local.set({ pointdev_voice_engine: engine })
   }, [engine])
 
-  // Load initial engine preference from storage
+  // Load initial engine preference
   useEffect(() => {
     chrome.storage.local.get('pointdev_voice_engine').then(({ pointdev_voice_engine }) => {
       if (pointdev_voice_engine) setEngine(pointdev_voice_engine)
     }).catch(() => {})
   }, [])
 
+  // Send transcript updates and feed voice signal to screenshot intelligence
+  const lastSegmentCountRef = useRef(0)
+  useEffect(() => {
+    if (state !== 'capturing') return
+
+    if (speech.segments.length > lastSegmentCountRef.current) {
+      const newSegment = speech.segments[speech.segments.length - 1]
+      chrome.runtime.sendMessage({
+        type: 'TRANSCRIPT_UPDATE',
+        data: { transcript: speech.transcript, segment: newSegment },
+      })
+      lastSegmentCountRef.current = speech.segments.length
+      setVoiceSignal(true, newSegment.text)
+      return
+    }
+
+    setVoiceSignal(speech.interimTranscript.length > 0, speech.interimTranscript)
+  }, [speech.segments, speech.transcript, speech.interimTranscript, state, setVoiceSignal])
+
   const handleStart = async () => {
     captureStartRef.current = Date.now()
+    lastSegmentCountRef.current = 0
     await startCapture()
-    // Close sidepanel — floating card takes over during capture
-    window.close()
+    // Start voice in sidepanel (stays open during capture)
+    if (speech.isAvailable) {
+      speech.start(captureStartRef.current)
+    }
   }
 
   const handleStop = async () => {
+    speech.stop()
     await stopCapture()
   }
 
@@ -72,13 +100,10 @@ export function App() {
     )
   }
 
-  // Preparing + Capturing states
+  // Preparing + Capturing states (sidepanel stays open for voice)
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center text-on-primary text-xs font-bold">P</div>
-        <div className="text-[15px] font-semibold text-on-surface">PointDev</div>
-      </div>
+      <AppHeader />
 
       {state === 'error' && error && (
         <div className="p-3 bg-error-container text-on-error-container rounded-md text-sm">
@@ -90,12 +115,37 @@ export function App() {
         <div className="text-muted text-center py-5">Preparing capture...</div>
       )}
 
+      {speech.error && (
+        <div className="p-3 bg-error-container text-on-error-container rounded-md text-sm">
+          {speech.error}
+        </div>
+      )}
+
+      {state === 'capturing' && engine === 'whisper' && whisper.modelState === 'downloading' && (
+        <div className="text-[11px] text-muted mb-2">
+          Downloading speech model... {Math.round(whisper.downloadProgress * 100)}%
+        </div>
+      )}
+
       <CaptureControls
         isCapturing={state === 'capturing'}
         onStart={handleStart}
         onStop={handleStop}
         onModeChange={setMode}
       />
+
+      {state === 'capturing' && (
+        <div className="p-2 bg-surface-variant rounded-md text-xs">
+          <strong>Transcript{speech.isListening ? ' (live)' : ''}:</strong>
+          <div className="mt-1">
+            {speech.transcript}
+            {speech.interimTranscript && <span className="text-muted"> {speech.interimTranscript}</span>}
+            {!speech.transcript && !speech.interimTranscript && (
+              <span className="text-muted italic">Speak to add voice context...</span>
+            )}
+          </div>
+        </div>
+      )}
 
       {state === 'capturing' && (
         <LiveFeedback
