@@ -35,6 +35,8 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   const recognitionRef = useRef<any>(null)
   const captureStartRef = useRef(0)
   const processedResultsRef = useRef(0)
+  const restartCountRef = useRef(0)
+  const MAX_RESTARTS = 5
 
   // Check mic permission on mount
   useEffect(() => {
@@ -121,6 +123,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
 
     recognition.onstart = () => {
       setIsListening(true)
+      restartCountRef.current = 0 // Reset backoff on successful start
     }
 
     recognition.onresult = (event: any) => {
@@ -166,8 +169,9 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     }
 
     recognition.onend = () => {
-      // Auto-restart for continuous recognition while ref is set
-      if (recognitionRef.current === recognition) {
+      // Auto-restart with backoff to prevent infinite restart loops
+      if (recognitionRef.current === recognition && restartCountRef.current < MAX_RESTARTS) {
+        restartCountRef.current++
         try { recognition.start() } catch { /* already stopped */ }
       }
     }

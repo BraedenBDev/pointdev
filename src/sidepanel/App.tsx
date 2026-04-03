@@ -55,10 +55,8 @@ export function App() {
   const handleStart = async () => {
     captureStartRef.current = Date.now()
     lastSegmentCountRef.current = 0
-    await startCapture()
-    // Only start voice if capture succeeded (not in error state)
-    // startCapture sets error state internally if it fails
-    if (speech.isAvailable && !error) {
+    const ok = await startCapture()
+    if (ok && speech.isAvailable) {
       speech.start(captureStartRef.current)
     }
   }

@@ -91,19 +91,23 @@ export function useCaptureSession() {
     }
   }, [])
 
-  const startCapture = useCallback(async () => {
+  const startCapture = useCallback(async (): Promise<boolean> => {
     setState('preparing')
     setError(null)
     annotationCountRef.current = 0
 
-    // Establish keep-alive port
+    // Establish keep-alive port with single-reconnect guard
     portIntentionalRef.current = false
-    portRef.current = chrome.runtime.connect({ name: 'pointdev-keepalive' })
-    portRef.current.onDisconnect.addListener(() => {
-      if (portIntentionalRef.current) return
-      // Service worker restarted -- reconnect
-      portRef.current = chrome.runtime.connect({ name: 'pointdev-keepalive' })
-    })
+    const connectPort = () => {
+      const port = chrome.runtime.connect({ name: 'pointdev-keepalive' })
+      port.onDisconnect.addListener(() => {
+        if (portIntentionalRef.current) return
+        // Service worker restarted — reconnect once (not recursively)
+        portRef.current = chrome.runtime.connect({ name: 'pointdev-keepalive' })
+      })
+      return port
+    }
+    portRef.current = connectPort()
 
     const response = await chrome.runtime.sendMessage({ type: 'START_CAPTURE' })
     if (response?.type === 'CAPTURE_ERROR') {
@@ -112,7 +116,7 @@ export function useCaptureSession() {
       portIntentionalRef.current = true
       portRef.current?.disconnect()
       portRef.current = null
-      return
+      return false
     }
 
     if (response?.type === 'SESSION_UPDATED') {
@@ -129,7 +133,9 @@ export function useCaptureSession() {
       })
       intelligence.start(response.session.startedAt)
       intelligenceRef.current = intelligence
+      return true
     }
+    return false
   }, [])
 
   const stopCapture = useCallback(async () => {

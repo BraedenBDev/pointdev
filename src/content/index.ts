@@ -43,6 +43,7 @@ let ancestryIndex = 0
 let highlightEl: HTMLElement | null = null
 let lastMouseMoveTime = 0
 const MOUSEMOVE_THROTTLE_MS = 50
+const MAX_FREEHAND_POINTS = 500
 
 function handleClick(e: MouseEvent) {
   if (!isCapturing || currentMode !== 'select') return
@@ -113,7 +114,8 @@ function handleMouseMove(e: MouseEvent) {
   } else if (currentMode === 'freehand') {
     // Throttle: skip points within 3px of the last one to avoid excessive accumulation
     const last = freehandPoints[freehandPoints.length - 1]
-    if (!last || Math.abs(e.clientX - last.clientX) > 3 || Math.abs(e.clientY - last.clientY) > 3) {
+    if (freehandPoints.length < MAX_FREEHAND_POINTS &&
+        (!last || Math.abs(e.clientX - last.clientX) > 3 || Math.abs(e.clientY - last.clientY) > 3)) {
       freehandPoints.push({ clientX: e.clientX, clientY: e.clientY })
     }
     overlay.drawFreehandPreview(freehandPoints)
@@ -189,26 +191,32 @@ function handleMouseUp(e: MouseEvent) {
 }
 
 function updateHighlight(element: Element | null) {
-  if (highlightEl) {
-    highlightEl.remove()
-    highlightEl = null
+  if (!element) {
+    if (highlightEl) {
+      highlightEl.style.display = 'none'
+    }
+    return
   }
-  if (!element) return
 
   const rect = element.getBoundingClientRect()
-  highlightEl = document.createElement('div')
-  highlightEl.setAttribute('data-pointdev', 'highlight')
+  if (!highlightEl) {
+    highlightEl = document.createElement('div')
+    highlightEl.setAttribute('data-pointdev', 'highlight')
+    Object.assign(highlightEl.style, {
+      position: 'fixed',
+      outline: '2px dashed #FF3333',
+      pointerEvents: 'none',
+      zIndex: '2147483646',
+    })
+    document.body.appendChild(highlightEl)
+  }
   Object.assign(highlightEl.style, {
-    position: 'fixed',
+    display: 'block',
     top: `${rect.top}px`,
     left: `${rect.left}px`,
     width: `${rect.width}px`,
     height: `${rect.height}px`,
-    outline: '2px dashed #FF3333',
-    pointerEvents: 'none',
-    zIndex: '2147483646',
   })
-  document.body.appendChild(highlightEl)
 }
 
 function handleWheel(e: WheelEvent) {
@@ -229,12 +237,21 @@ function handleWheel(e: WheelEvent) {
 }
 
 function startCapture() {
+  // Stop any existing capture to prevent leaked state
+  if (isCapturing) stopCapture()
+
   // Clean up any orphaned floating cards from previous extension sessions
   document.querySelectorAll('[data-pointdev-float]').forEach(el => el.remove())
 
   captureStartedAt = Date.now()
   isCapturing = true
   currentMode = 'select'
+  drawStart = null
+  freehandPoints = []
+  hoveredElement = null
+  ancestryChain = []
+  ancestryIndex = 0
+  lastMouseMoveTime = 0
 
   overlay = new CanvasOverlay(document, window)
   overlay.setMode('select')
@@ -270,7 +287,10 @@ function stopCapture() {
   hoveredElement = null
   ancestryChain = []
   ancestryIndex = 0
-  updateHighlight(null)
+  if (highlightEl) {
+    highlightEl.remove()
+    highlightEl = null
+  }
 
   if (floatingCard) {
     floatingCard.destroy()

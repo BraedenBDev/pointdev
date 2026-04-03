@@ -23,6 +23,7 @@ export class CanvasOverlay {
   private drawnAnnotations: StoredAnnotation[] = []
   private scrollRAF: number | null = null
   private boundOnScroll: () => void
+  private boundOnResize: () => void
   // Track in-progress preview so scroll redraws can preserve it
   private currentPreview:
     | { type: 'circle' | 'arrow' | 'rectangle'; start: Point; current: Point }
@@ -61,6 +62,14 @@ export class CanvasOverlay {
       })
     }
     win.addEventListener('scroll', this.boundOnScroll, { passive: true })
+
+    // Resize canvas when window dimensions change
+    this.boundOnResize = () => {
+      this.canvas.width = win.innerWidth
+      this.canvas.height = win.innerHeight
+      this.redraw()
+    }
+    win.addEventListener('resize', this.boundOnResize)
   }
 
   setMode(mode: CaptureMode): void {
@@ -276,6 +285,7 @@ export class CanvasOverlay {
 
   destroy(): void {
     this.win.removeEventListener('scroll', this.boundOnScroll)
+    this.win.removeEventListener('resize', this.boundOnResize)
     if (this.scrollRAF) {
       this.win.cancelAnimationFrame(this.scrollRAF)
     }
