@@ -1,4 +1,5 @@
 import { CanvasOverlay } from './canvas-overlay'
+import { FloatingCard } from './floating-card'
 import { CursorTracker } from './cursor-tracker'
 import { ConsoleNetworkCapture } from './console-network-capture'
 import { extractElementData, findNearestElement, discoverCssVariables, getAncestryChain } from './element-selector'
@@ -23,6 +24,7 @@ import('css-selector-generator').then(mod => {
   }
 })
 
+let floatingCard: FloatingCard | null = null
 let overlay: CanvasOverlay | null = null
 let cursorTracker: CursorTracker | null = null
 let consoleCapture: ConsoleNetworkCapture | null = null
@@ -42,6 +44,7 @@ let highlightEl: HTMLElement | null = null
 
 function handleClick(e: MouseEvent) {
   if (!isCapturing || currentMode !== 'select') return
+  if (floatingCard && floatingCard.getHostElement().contains(e.target as Node)) return
 
   e.preventDefault()
   e.stopPropagation()
@@ -77,6 +80,7 @@ function handleClick(e: MouseEvent) {
 
 function handleMouseDown(e: MouseEvent) {
   if (!isCapturing || currentMode === 'select' || !overlay) return
+  if (floatingCard && floatingCard.getHostElement().contains(e.target as Node)) return
   drawStart = { clientX: e.clientX, clientY: e.clientY }
   if (currentMode === 'freehand') {
     freehandPoints = [{ clientX: e.clientX, clientY: e.clientY }]
@@ -236,6 +240,9 @@ function startCapture() {
   })
   consoleCapture.start()
 
+  floatingCard = new FloatingCard()
+  floatingCard.show(captureStartedAt)
+
   document.addEventListener('click', handleClick, true)
   document.addEventListener('mousedown', handleMouseDown, true)
   document.addEventListener('mousemove', handleMouseMove, true)
@@ -255,6 +262,11 @@ function stopCapture() {
   ancestryChain = []
   ancestryIndex = 0
   updateHighlight(null)
+
+  if (floatingCard) {
+    floatingCard.destroy()
+    floatingCard = null
+  }
 
   if (consoleCapture) {
     consoleCapture.stop()
@@ -276,7 +288,7 @@ function stopCapture() {
 }
 
 // Message listener — only return true for types this context handles
-const CONTENT_HANDLED = new Set(['PING', 'INJECT_CAPTURE', 'REMOVE_CAPTURE', 'MODE_CHANGED'])
+const CONTENT_HANDLED = new Set(['PING', 'INJECT_CAPTURE', 'REMOVE_CAPTURE', 'MODE_CHANGED', 'TRANSCRIPT_SNIPPET', 'SESSION_STATS'])
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (!CONTENT_HANDLED.has(message.type)) return false
@@ -302,6 +314,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     case 'MODE_CHANGED':
       currentMode = message.mode
       if (overlay) overlay.setMode(message.mode)
+      floatingCard?.setMode(message.mode)
       // Clean up ancestry state and freehand points when leaving select/freehand mode
       if (message.mode !== 'select') {
         hoveredElement = null
@@ -312,6 +325,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       if (message.mode !== 'freehand') {
         freehandPoints = []
       }
+      sendResponse({ ok: true })
+      return false // synchronous response
+    case 'TRANSCRIPT_SNIPPET':
+      floatingCard?.updateTranscript(message.text)
+      sendResponse({ ok: true })
+      return false // synchronous response
+    case 'SESSION_STATS':
+      floatingCard?.updateStats(message.annotationCount, message.screenshotCount)
       sendResponse({ ok: true })
       return false // synchronous response
   }

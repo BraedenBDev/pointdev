@@ -164,6 +164,17 @@ export async function handleMessage(
       resetDwellDetector()
       const finalSession = store.endSession()!
       console.log('[PointDev] CAPTURE_COMPLETE: screenshots=', finalSession.screenshots.length, 'annotations=', finalSession.annotations.length)
+
+      // Reopen sidepanel with results
+      try {
+        const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+        if (tabs[0]?.windowId) {
+          await (chrome.sidePanel as any).open({ windowId: tabs[0].windowId })
+        }
+      } catch {
+        // sidePanel.open() may require user gesture in some contexts
+      }
+
       return { type: 'CAPTURE_COMPLETE', session: finalSession }
     }
 
@@ -178,6 +189,13 @@ export async function handleMessage(
     case 'TRANSCRIPT_UPDATE': {
       store.updateTranscript(message.data.transcript, message.data.segment)
       const session = store.getSession()
+      // Forward transcript snippet to floating card
+      if (session) {
+        chrome.tabs.sendMessage(session.tabId, {
+          type: 'TRANSCRIPT_SNIPPET',
+          text: message.data.segment.text,
+        }).catch(() => {})
+      }
       return session ? { type: 'SESSION_UPDATED', session } : undefined
     }
 
@@ -190,6 +208,14 @@ export async function handleMessage(
     case 'ANNOTATION_ADDED': {
       store.addAnnotation(message.data)
       const session = store.getSession()
+      // Update floating card stats
+      if (session) {
+        chrome.tabs.sendMessage(session.tabId, {
+          type: 'SESSION_STATS',
+          annotationCount: session.annotations.length,
+          screenshotCount: session.screenshots.length,
+        }).catch(() => {})
+      }
       return session ? { type: 'SESSION_UPDATED', session } : undefined
     }
 
@@ -250,6 +276,14 @@ export async function handleMessage(
         }
 
         const updated = store.getSession()
+        // Update floating card stats after screenshot change
+        if (updated) {
+          chrome.tabs.sendMessage(updated.tabId, {
+            type: 'SESSION_STATS',
+            annotationCount: updated.annotations.length,
+            screenshotCount: updated.screenshots.length,
+          }).catch(() => {})
+        }
         return updated ? { type: 'SESSION_UPDATED', session: updated } : undefined
       } catch (err) {
         console.error('[PointDev] SCREENSHOT_REQUEST failed:', err)
@@ -306,6 +340,14 @@ export async function handleMessage(
 
         store.addAnnotatedScreenshot(screenshot)
         const updated = store.getSession()
+        // Update floating card stats after screenshot added
+        if (updated) {
+          chrome.tabs.sendMessage(updated.tabId, {
+            type: 'SESSION_STATS',
+            annotationCount: updated.annotations.length,
+            screenshotCount: updated.screenshots.length,
+          }).catch(() => {})
+        }
         return updated ? { type: 'SESSION_UPDATED', session: updated } : undefined
       } catch (err) {
         console.error('[PointDev] SMART_SCREENSHOT_REQUEST failed:', err)

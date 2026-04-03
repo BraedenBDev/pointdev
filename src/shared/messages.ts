@@ -14,6 +14,10 @@ export type Message =
   | { type: 'MODE_CHANGED'; mode: CaptureMode }
   | { type: 'PING' }
 
+  // Service Worker → Content Script (floating card updates)
+  | { type: 'TRANSCRIPT_SNIPPET'; text: string }
+  | { type: 'SESSION_STATS'; annotationCount: number; screenshotCount: number }
+
   // Content Script → Service Worker
   | { type: 'ELEMENT_SELECTED'; data: SelectedElementData }
   | { type: 'ANNOTATION_ADDED'; data: AnnotationData }
