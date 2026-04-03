@@ -33,6 +33,6 @@
     "128": "icons/icon128.png"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' https://*.huggingface.co https://*.hf.co http://localhost:* ws://localhost:*; object-src 'self'"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' https://*.huggingface.co https://*.hf.co ws://localhost:*; object-src 'self'"
   }
 }

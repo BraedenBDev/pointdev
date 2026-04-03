@@ -13,6 +13,7 @@ export type Message =
   | { type: 'REMOVE_CAPTURE' }
   | { type: 'MODE_CHANGED'; mode: CaptureMode }
   | { type: 'PING' }
+  | { type: 'SET_CONSOLE_NONCE'; nonce: string }
 
   // Service Worker → Content Script (floating card updates)
   | { type: 'TRANSCRIPT_SNIPPET'; text: string }

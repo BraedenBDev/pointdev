@@ -24,7 +24,8 @@ self.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
 
   if (msg.type === 'init') {
     try {
-      const modelId = msg.modelId || 'Xenova/whisper-tiny.en'
+      const ALLOWED_MODELS = ['Xenova/whisper-tiny.en', 'Xenova/whisper-small.en', 'Xenova/whisper-base.en']
+      const modelId = msg.modelId && ALLOWED_MODELS.includes(msg.modelId) ? msg.modelId : 'Xenova/whisper-tiny.en'
 
       self.postMessage({ type: 'progress', progress: 0 } as WorkerOutMessage)
 

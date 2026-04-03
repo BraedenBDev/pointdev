@@ -5,9 +5,29 @@ type BatchCallback = (entries: ConsoleEntry[], requests: FailedRequest[]) => voi
 export class ConsoleNetworkCapture {
   private onBatch: BatchCallback
   private listener: ((e: Event) => void) | null = null
+  private nonce: string | null = null
+  private batchEvent = 'pointdev-console-batch'
+  private stopEvent = 'pointdev-console-stop'
 
-  constructor(onBatch: BatchCallback) {
+  constructor(onBatch: BatchCallback, nonce?: string) {
     this.onBatch = onBatch
+    if (nonce) {
+      this.setNonce(nonce)
+    }
+  }
+
+  setNonce(nonce: string): void {
+    const wasListening = this.listener !== null
+    if (wasListening) {
+      // Re-bind listener to new event name
+      document.removeEventListener(this.batchEvent, this.listener!)
+    }
+    this.nonce = nonce
+    this.batchEvent = `pointdev-console-batch-${nonce}`
+    this.stopEvent = `pointdev-console-stop-${nonce}`
+    if (wasListening) {
+      document.addEventListener(this.batchEvent, this.listener!)
+    }
   }
 
   start(): void {
@@ -17,16 +37,16 @@ export class ConsoleNetworkCapture {
         this.onBatch(detail.entries || [], detail.requests || [])
       }
     }
-    document.addEventListener('pointdev-console-batch', this.listener)
+    document.addEventListener(this.batchEvent, this.listener)
   }
 
   stop(): void {
     if (this.listener) {
-      document.removeEventListener('pointdev-console-batch', this.listener)
+      document.removeEventListener(this.batchEvent, this.listener)
       this.listener = null
     }
     // Signal main-world script to stop
-    document.dispatchEvent(new CustomEvent('pointdev-console-stop'))
+    document.dispatchEvent(new CustomEvent(this.stopEvent))
   }
 }
 
@@ -36,7 +56,7 @@ export class ConsoleNetworkCapture {
 //
 // The following is a REFERENCE COPY for documentation/testing purposes only — it is not
 // called at runtime. The canonical version is the inline function in message-handler.ts.
-export function mainWorldCaptureScript(captureStartedAt: number): void {
+export function mainWorldCaptureScript(captureStartedAt: number, nonce: string): void {
   const origConsoleError = console.error
   const origConsoleWarn = console.warn
   const origFetch = window.fetch
@@ -121,17 +141,20 @@ export function mainWorldCaptureScript(captureStartedAt: number): void {
   window.addEventListener('error', onError)
   window.addEventListener('unhandledrejection', onRejection)
 
+  const batchEvent = `pointdev-console-batch-${nonce}`
+  const stopEvent = `pointdev-console-stop-${nonce}`
+
   // Flush every 500ms
   const interval = setInterval(() => {
     if (entries.length > 0 || requests.length > 0) {
-      document.dispatchEvent(new CustomEvent('pointdev-console-batch', {
+      document.dispatchEvent(new CustomEvent(batchEvent, {
         detail: { entries: entries.splice(0), requests: requests.splice(0) },
       }))
     }
   }, 500)
 
   // Listen for stop signal
-  document.addEventListener('pointdev-console-stop', () => {
+  document.addEventListener(stopEvent, () => {
     console.error = origConsoleError
     console.warn = origConsoleWarn
     window.fetch = origFetch
@@ -142,7 +165,7 @@ export function mainWorldCaptureScript(captureStartedAt: number): void {
     window.removeEventListener('unhandledrejection', onRejection)
     // Final flush
     if (entries.length > 0 || requests.length > 0) {
-      document.dispatchEvent(new CustomEvent('pointdev-console-batch', {
+      document.dispatchEvent(new CustomEvent(batchEvent, {
         detail: { entries: entries.splice(0), requests: requests.splice(0) },
       }))
     }

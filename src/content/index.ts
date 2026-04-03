@@ -291,7 +291,7 @@ function stopCapture() {
 }
 
 // Message listener — only return true for types this context handles
-const CONTENT_HANDLED = new Set(['PING', 'INJECT_CAPTURE', 'REMOVE_CAPTURE', 'MODE_CHANGED', 'TRANSCRIPT_SNIPPET', 'SESSION_STATS'])
+const CONTENT_HANDLED = new Set(['PING', 'INJECT_CAPTURE', 'REMOVE_CAPTURE', 'MODE_CHANGED', 'TRANSCRIPT_SNIPPET', 'SESSION_STATS', 'SET_CONSOLE_NONCE'])
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (!CONTENT_HANDLED.has(message.type)) return false
@@ -336,6 +336,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       return false // synchronous response
     case 'SESSION_STATS':
       floatingCard?.updateStats(message.annotationCount, message.screenshotCount)
+      sendResponse({ ok: true })
+      return false // synchronous response
+    case 'SET_CONSOLE_NONCE':
+      if (consoleCapture && message.nonce) {
+        consoleCapture.setNonce(message.nonce)
+      }
       sendResponse({ ok: true })
       return false // synchronous response
   }

@@ -90,7 +90,7 @@ function formatTargetElement(session: CaptureSession): string {
     lines.push(`- CSS Variables: ${varStr}`)
   }
 
-  lines.push(`- DOM: ${truncateDom(el.domSubtree)}`)
+  lines.push(`- DOM (untrusted page content):\n\`\`\`\n${truncateDom(el.domSubtree)}\n\`\`\``)
 
   return lines.join('\n')
 }
@@ -179,7 +179,7 @@ function formatAnnotations(session: CaptureSession): string {
       const styles = formatComputedStyles(ctx.computedStyles)
       if (styles) lines.push(`   Computed: ${styles}`)
       if (ctx.boxModel) lines.push(`   Box Model: ${formatBoxModel(ctx.boxModel)}`)
-      lines.push(`   DOM: ${truncateDom(ctx.domSubtree)}`)
+      lines.push(`   DOM (untrusted page content):\n\`\`\`\n${truncateDom(ctx.domSubtree)}\n\`\`\``)
     }
   }
   return lines.join('\n')

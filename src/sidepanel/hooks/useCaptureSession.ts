@@ -5,9 +5,12 @@ import { ScreenshotIntelligence } from '../screenshot-intelligence'
 
 type CaptureState = 'idle' | 'preparing' | 'capturing' | 'complete' | 'error'
 
-/** Push session to bridge server. Silent fail if bridge is not running. */
-function pushToBridge(session: CaptureSession): void {
+/** Push session to bridge server. Silent fail if bridge is not running or disabled. */
+async function pushToBridge(session: CaptureSession): Promise<void> {
   try {
+    const { pointdev_bridge_enabled } = await chrome.storage.local.get('pointdev_bridge_enabled')
+    if (!pointdev_bridge_enabled) return
+
     const stripped = {
       ...session,
       screenshots: session.screenshots.map(({ dataUrl, ...rest }) => rest),

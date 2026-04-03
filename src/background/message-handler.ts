@@ -118,11 +118,13 @@ export async function handleMessage(
       // Offscreen doc approach disabled — Chrome doesn't transfer mic permission to offscreen contexts
 
       // Inject console/network capture into the page's main world
+      // Generate a random nonce so malicious pages can't poison the IPC channel
+      const nonce = Math.random().toString(36).slice(2, 10)
       try {
         await chrome.scripting.executeScript({
           target: { tabId: tab.id },
           world: 'MAIN' as any,
-          func: (startedAt: number) => {
+          func: (startedAt: number, nonce: string) => {
             // Inline the main-world capture logic
             // (imported version can't cross the world boundary)
             const origError = console.error, origWarn = console.warn
@@ -130,6 +132,8 @@ export async function handleMessage(
             const origSend = XMLHttpRequest.prototype.send
             const entries: any[] = [], requests: any[] = []
             const ts = () => Date.now() - startedAt
+            const batchEvent = `pointdev-console-batch-${nonce}`
+            const stopEvent = `pointdev-console-stop-${nonce}`
 
             console.error = function(...a: any[]) {
               entries.push({ level: 'error', message: a.map(String).join(' ').slice(0, 500), stack: new Error().stack?.split('\n').slice(2, 5).join('\n'), timestampMs: ts() })
@@ -155,11 +159,13 @@ export async function handleMessage(
             const onRejection = (e: PromiseRejectionEvent) => { entries.push({ level: 'error', message: (e.reason?.message || String(e.reason)).slice(0, 500), stack: e.reason?.stack?.split('\n').slice(0, 3).join('\n'), timestampMs: ts() }) }
             window.addEventListener('error', onError)
             window.addEventListener('unhandledrejection', onRejection)
-            const iv = setInterval(() => { if (entries.length || requests.length) document.dispatchEvent(new CustomEvent('pointdev-console-batch', { detail: { entries: entries.splice(0), requests: requests.splice(0) } })) }, 500)
-            document.addEventListener('pointdev-console-stop', () => { console.error = origError; console.warn = origWarn; window.fetch = origFetch; XMLHttpRequest.prototype.open = origOpen; XMLHttpRequest.prototype.send = origSend; clearInterval(iv); window.removeEventListener('error', onError); window.removeEventListener('unhandledrejection', onRejection); if (entries.length || requests.length) document.dispatchEvent(new CustomEvent('pointdev-console-batch', { detail: { entries: entries.splice(0), requests: requests.splice(0) } })) }, { once: true })
+            const iv = setInterval(() => { if (entries.length || requests.length) document.dispatchEvent(new CustomEvent(batchEvent, { detail: { entries: entries.splice(0), requests: requests.splice(0) } })) }, 500)
+            document.addEventListener(stopEvent, () => { console.error = origError; console.warn = origWarn; window.fetch = origFetch; XMLHttpRequest.prototype.open = origOpen; XMLHttpRequest.prototype.send = origSend; clearInterval(iv); window.removeEventListener('error', onError); window.removeEventListener('unhandledrejection', onRejection); if (entries.length || requests.length) document.dispatchEvent(new CustomEvent(batchEvent, { detail: { entries: entries.splice(0), requests: requests.splice(0) } })) }, { once: true })
           },
-          args: [Date.now()],
+          args: [Date.now(), nonce],
         })
+        // Send nonce to content script so it can listen on the correct channel
+        chrome.tabs.sendMessage(tab.id, { type: 'SET_CONSOLE_NONCE', nonce }).catch(() => {})
       } catch {
         // Main-world injection failed (e.g., chrome:// pages) — continue without it
       }

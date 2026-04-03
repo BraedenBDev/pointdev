@@ -191,9 +191,13 @@ describe('formatSession', () => {
       },
     }))
     expect(output).toContain('<!-- truncated -->')
-    // Should not exceed ~550 chars for the DOM line
-    const domLine = output.split('\n').find(l => l.startsWith('- DOM:'))
-    expect(domLine!.length).toBeLessThan(600)
+    // DOM is now in a code block; the truncated content should still be under 600 chars
+    const domLabelLine = output.split('\n').find(l => l.startsWith('- DOM (untrusted page content):'))
+    expect(domLabelLine).toBeDefined()
+    // Find the content inside the code fence (between ``` markers)
+    const codeBlockMatch = output.match(/```\n([\s\S]*?)\n```/)
+    expect(codeBlockMatch).toBeTruthy()
+    expect(codeBlockMatch![1].length).toBeLessThan(600)
   })
 
   it('formats annotated screenshots with timestamps', () => {
