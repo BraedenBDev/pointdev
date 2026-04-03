@@ -10,8 +10,15 @@ vi.stubGlobal('chrome', {
     captureVisibleTab: vi.fn().mockResolvedValue('data:image/png;base64,abc'),
     sendMessage: vi.fn().mockResolvedValue({ ok: true, url: 'https://example.com', title: 'Test', viewport: { width: 1200, height: 800 } }),
   },
+  runtime: {
+    sendMessage: vi.fn().mockResolvedValue(undefined),
+    getManifest: vi.fn().mockReturnValue({ content_scripts: [{ js: ['content.js'] }] }),
+  },
   scripting: {
     executeScript: vi.fn().mockResolvedValue(undefined),
+  },
+  sidePanel: {
+    open: vi.fn().mockResolvedValue(undefined),
   },
   storage: {
     session: {

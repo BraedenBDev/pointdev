@@ -3,6 +3,16 @@ import type { AnnotationData, CursorSampleData, VoiceSegment } from '@shared/typ
 import { distance } from '@shared/dwell'
 import type { SessionStore } from './session-store'
 
+/** Broadcast SESSION_UPDATED to all extension contexts (sidepanel, etc.)
+ *  sendResponse only goes to the original sender — this ensures the sidepanel
+ *  receives live updates during capture. */
+function broadcastSessionUpdate(store: SessionStore): void {
+  const session = store.getSession()
+  if (session) {
+    chrome.runtime.sendMessage({ type: 'SESSION_UPDATED', session }).catch(() => {})
+  }
+}
+
 /** Resolve annotation index and build description parts for a screenshot. */
 function buildAnnotationDesc(
   annotations: AnnotationData[],
@@ -206,12 +216,14 @@ export async function handleMessage(
           text: message.data.segment.text,
         }).catch(() => {})
       }
+      broadcastSessionUpdate(store)
       return session ? { type: 'SESSION_UPDATED', session } : undefined
     }
 
     case 'ELEMENT_SELECTED': {
       store.setSelectedElement(message.data)
       const session = store.getSession()
+      broadcastSessionUpdate(store)
       return session ? { type: 'SESSION_UPDATED', session } : undefined
     }
 
@@ -226,6 +238,7 @@ export async function handleMessage(
           screenshotCount: session.screenshots.length,
         }).catch(() => {})
       }
+      broadcastSessionUpdate(store)
       return session ? { type: 'SESSION_UPDATED', session } : undefined
     }
 
@@ -294,6 +307,7 @@ export async function handleMessage(
             screenshotCount: updated.screenshots.length,
           }).catch(() => {})
         }
+        broadcastSessionUpdate(store)
         return updated ? { type: 'SESSION_UPDATED', session: updated } : undefined
       } catch (err) {
         console.error('[PointDev] SCREENSHOT_REQUEST failed:', err)
@@ -358,6 +372,7 @@ export async function handleMessage(
             screenshotCount: updated.screenshots.length,
           }).catch(() => {})
         }
+        broadcastSessionUpdate(store)
         return updated ? { type: 'SESSION_UPDATED', session: updated } : undefined
       } catch (err) {
         console.error('[PointDev] SMART_SCREENSHOT_REQUEST failed:', err)
