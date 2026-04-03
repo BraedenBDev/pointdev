@@ -5,7 +5,6 @@ import { useWhisperRecognition } from './hooks/useWhisperRecognition'
 import { CaptureControls } from './components/CaptureControls'
 import { LiveFeedback } from './components/LiveFeedback'
 import { OutputView } from './components/OutputView'
-import './styles.css'
 
 type SpeechEngine = 'web-speech' | 'whisper'
 
