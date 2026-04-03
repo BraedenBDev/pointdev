@@ -12,8 +12,8 @@ PointDev is an open source Chrome extension (MV3) that captures structured brows
 bun install          # Install dependencies
 bun dev              # Start Vite in watch mode (load dist/ as unpacked extension)
 bun build            # Production build
-bun test             # Run Vitest unit tests
-bun test:watch       # Vitest watch mode
+bun run test         # Run Vitest unit tests (NOT `bun test` — that invokes Bun's runner)
+bun run test:watch   # Vitest watch mode
 bun lint             # ESLint + Prettier check
 ```
 

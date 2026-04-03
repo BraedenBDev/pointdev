@@ -77,12 +77,6 @@ export function usePermissionStatus() {
         label: tabOk ? 'Allowed' : 'Blocked',
       })
 
-      // Offscreen Doc — always available if permission is declared
-      results.push({
-        name: 'Offscreen Doc',
-        status: 'ok',
-        label: 'Available',
-      })
 
       // Service Worker — check if it's active
       let swOk = false

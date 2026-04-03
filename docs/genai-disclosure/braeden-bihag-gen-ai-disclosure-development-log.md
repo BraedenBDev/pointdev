@@ -544,7 +544,7 @@
 
 | Decision | Made by | Rationale |
 |---|---|---|
-| Abandon offscreen for speech | AI (after research + 2 failed attempts) | Offscreen getUserMedia is fundamentally unreliable in Chrome extensions |
+| Abandon offscreen for speech | AI (after research + 2 failed attempts) | Offscreen getUserMedia does not reliably get mic permission in Chrome extensions |
 | Run SpeechRecognition in visible tab | AI | Research confirmed visible extension pages reliably get mic permission |
 | Auto-open mic tab on sidepanel mount | Braeden | Users shouldn't have to discover a setup button |
 | Keep mic tab open during capture | AI | SpeechRecognition needs a DOM context that persists through the capture |
@@ -584,7 +584,7 @@ Voice, annotations, and cursor tracking all captured simultaneously on https://a
 2. **Real-world agent validation.** Braeden tested PointDev output on a separate Claude session managing the Almost Impossible Agency website. The AI agent parsed PointDev output and provided actionable feedback:
    - Correctly identified three UI issues from voice + annotations + cursor dwell
    - Requested: screenshots at annotation timestamps, source file mapping, computed styles on annotations, DOM subtree per annotation
-   - Key quote: "Loom for humans, annotated screenshots + structured metadata for agents. Same capture session, two output formats."
+   - Framing that emerged: two output formats from one capture session, human-readable (like Loom) and structured metadata for agents.
    - Filed as issues #19, #20, #21
 
 3. **Open source library research.** Investigated three libraries for potential integration:
@@ -782,7 +782,6 @@ Voice, annotations, and cursor tracking all captured simultaneously on https://a
 - Tune interest threshold and signal weights based on real usage
 - Issue #19 (screenshot at annotation timestamps) is now superseded by the intelligence module
 - Tag v0.1.0 release
-- NLnet submission
 
 ---
 
@@ -804,7 +803,7 @@ Voice, annotations, and cursor tracking all captured simultaneously on https://a
 
 2. **v0.1.0 release.** Tagged and pushed first release after confirming smart screenshots work in manual testing.
 
-3. **Competitive analysis.** Researched the open source landscape via Tavily and web search. Documented in `docs/competitive-analysis-2026-03-25.md`. Key finding: no direct open source competitor. BrowserTools MCP is closest but fundamentally passive (AI pulls data) vs PointDev's human-driven intent capture.
+3. **Competitive analysis.** Researched the open source landscape via Tavily and web search. Documented in `docs/competitive-analysis-2026-03-25.md`. Key finding: no direct open source competitor. BrowserTools MCP is closest but passive (AI pulls data); PointDev captures human-driven intent.
 
 4. **Risk analysis and issue prioritization.** Created priority labels (P1-critical through P4-future) for all 15 open issues. Created two new risk-mitigation issues: #34 (Firefox port) and #35 (community engagement). Closed #19 (superseded by intelligence module).
 
@@ -882,11 +881,11 @@ After multiple iterations debugging Chrome extension constraints:
 3. Added CSP: `wasm-unsafe-eval` for WASM execution, `connect-src` for HF model downloads
 4. Model loads and runs inference successfully. ONNX Runtime warns about unused initializers (harmless). Blob worker CSP warnings (harmless — falls back to single-threaded).
 5. Transcription is slow (~3-5s per 3s audio chunk) due to WASM single-thread fallback. Functional but not real-time.
-6. Tested and confirmed: on-device transcription produces actual text with zero cloud dependency.
+6. Tested and confirmed: on-device transcription produces usable output with zero cloud dependency.
 
 ### Next steps
 
 - Optimize Whisper performance (WebGPU backend, larger chunks, model caching)
 - Wire MCP stdio transport in bridge server
 - Update README for new features
-- NLnet submission
+

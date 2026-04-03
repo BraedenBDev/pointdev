@@ -13,13 +13,6 @@ export default defineConfig({
       '@': resolve(__dirname, 'src/sidepanel'),
     },
   },
-  build: {
-    rollupOptions: {
-      input: {
-        offscreen: resolve(__dirname, 'src/offscreen/offscreen.html'),
-      },
-    },
-  },
   test: {
     globals: true,
     environment: 'jsdom',

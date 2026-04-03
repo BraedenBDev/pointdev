@@ -176,7 +176,7 @@ export function useWhisperRecognition(): UseWhisperRecognitionReturn {
   }, [])
 
   // Clean up all resources on unmount
-  useEffect(() => stop, [])
+  useEffect(() => () => stop(), [stop])
 
   return {
     isAvailable: typeof Worker !== 'undefined',

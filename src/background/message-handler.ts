@@ -370,20 +370,6 @@ export async function handleMessage(
       return undefined
     }
 
-    case 'VOICE_ERROR': {
-      console.error('[PointDev] Voice error:', message.error)
-      return undefined
-    }
-
-    case 'WHISPER_PROGRESS': {
-      console.log('[PointDev] Whisper download:', Math.round(message.progress * 100) + '%')
-      return undefined
-    }
-
-    case 'WHISPER_READY': {
-      console.log('[PointDev] Whisper model ready')
-      return undefined
-    }
 
     default:
       return undefined

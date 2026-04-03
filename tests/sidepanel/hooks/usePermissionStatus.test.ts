@@ -33,13 +33,13 @@ describe('usePermissionStatus', () => {
     mockChrome.runtime.sendMessage.mockResolvedValue({ type: 'PONG' })
   })
 
-  it('returns all 5 permission rows', async () => {
+  it('returns all 4 permission rows', async () => {
     const { result } = renderHook(() => usePermissionStatus())
     await waitFor(() => {
-      expect(result.current.permissions).toHaveLength(5)
+      expect(result.current.permissions).toHaveLength(4)
     })
     const names = result.current.permissions.map(p => p.name)
-    expect(names).toEqual(['Microphone', 'Active Tab', 'Scripting', 'Offscreen Doc', 'Service Worker'])
+    expect(names).toEqual(['Microphone', 'Active Tab', 'Scripting', 'Service Worker'])
   })
 
   it('reports canCapture true when tab is accessible', async () => {
@@ -54,7 +54,7 @@ describe('usePermissionStatus', () => {
     mockChrome.tabs.get.mockResolvedValue({ id: 2, url: 'chrome://extensions' })
     const { result } = renderHook(() => usePermissionStatus())
     await waitFor(() => {
-      expect(result.current.permissions).toHaveLength(5)
+      expect(result.current.permissions).toHaveLength(4)
       expect(result.current.canCapture).toBe(false)
       const tabRow = result.current.permissions.find(p => p.name === 'Active Tab')
       expect(tabRow?.status).toBe('error')
@@ -66,7 +66,7 @@ describe('usePermissionStatus', () => {
     mockPermissions.query.mockResolvedValue({ state: 'denied' })
     const { result } = renderHook(() => usePermissionStatus())
     await waitFor(() => {
-      expect(result.current.permissions).toHaveLength(5)
+      expect(result.current.permissions).toHaveLength(4)
     })
     const micRow = result.current.permissions.find(p => p.name === 'Microphone')
     expect(micRow?.status).toBe('error')
@@ -77,7 +77,7 @@ describe('usePermissionStatus', () => {
     mockPermissions.query.mockResolvedValue({ state: 'granted' })
     const { result } = renderHook(() => usePermissionStatus())
     await waitFor(() => {
-      expect(result.current.permissions).toHaveLength(5)
+      expect(result.current.permissions).toHaveLength(4)
     })
     const micRow = result.current.permissions.find(p => p.name === 'Microphone')
     expect(micRow?.status).toBe('ok')
@@ -89,7 +89,7 @@ describe('usePermissionStatus', () => {
     mockChrome.tabs.query.mockResolvedValue([{ url: 'chrome-extension://abc/popup.html' }])
     const { result } = renderHook(() => usePermissionStatus())
     await waitFor(() => {
-      expect(result.current.permissions).toHaveLength(5)
+      expect(result.current.permissions).toHaveLength(4)
     })
     const scriptRow = result.current.permissions.find(p => p.name === 'Scripting')
     expect(scriptRow?.status).toBe('error')
@@ -100,28 +100,19 @@ describe('usePermissionStatus', () => {
     mockChrome.runtime.sendMessage.mockRejectedValue(new Error('SW not available'))
     const { result } = renderHook(() => usePermissionStatus())
     await waitFor(() => {
-      expect(result.current.permissions).toHaveLength(5)
+      expect(result.current.permissions).toHaveLength(4)
     })
     const swRow = result.current.permissions.find(p => p.name === 'Service Worker')
     expect(swRow?.status).toBe('error')
     expect(swRow?.label).toBe('Inactive')
   })
 
-  it('always reports offscreen doc as available', async () => {
-    const { result } = renderHook(() => usePermissionStatus())
-    await waitFor(() => {
-      expect(result.current.permissions).toHaveLength(5)
-    })
-    const offscreenRow = result.current.permissions.find(p => p.name === 'Offscreen Doc')
-    expect(offscreenRow?.status).toBe('ok')
-    expect(offscreenRow?.label).toBe('Available')
-  })
 
   it('reports canCapture false when tabs.query throws', async () => {
     mockChrome.tabs.query.mockRejectedValue(new Error('tabs API unavailable'))
     const { result } = renderHook(() => usePermissionStatus())
     await waitFor(() => {
-      expect(result.current.permissions).toHaveLength(5)
+      expect(result.current.permissions).toHaveLength(4)
     })
     expect(result.current.canCapture).toBe(false)
     const tabRow = result.current.permissions.find(p => p.name === 'Active Tab')

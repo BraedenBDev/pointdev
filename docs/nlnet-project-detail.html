@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PointDev - Project Detail</title>
+<style>
+  @page {
+    size: A4;
+    margin: 20mm 18mm;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.5;
+    color: #1a1a1a;
+    max-width: 170mm;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 16pt;
+    margin-bottom: 4pt;
+    color: #111;
+    letter-spacing: -0.3px;
+  }
+  h2 {
+    font-size: 12pt;
+    margin-top: 14pt;
+    margin-bottom: 6pt;
+    color: #222;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 3pt;
+  }
+  h3 {
+    font-size: 10.5pt;
+    margin-top: 10pt;
+    margin-bottom: 4pt;
+    color: #333;
+  }
+  p { margin-bottom: 6pt; }
+  .subtitle {
+    font-size: 10pt;
+    color: #555;
+    margin-bottom: 12pt;
+  }
+  .capture-example {
+    background: #f6f6f6;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 9pt;
+    line-height: 1.6;
+    margin: 8pt 0 10pt;
+    white-space: pre-wrap;
+  }
+  ul {
+    margin: 4pt 0 8pt 16pt;
+    padding: 0;
+  }
+  li { margin-bottom: 3pt; }
+  .metrics {
+    display: flex;
+    gap: 20px;
+    margin: 8pt 0 12pt;
+  }
+  .metric {
+    text-align: center;
+    flex: 1;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+  }
+  .metric-value {
+    font-size: 18pt;
+    font-weight: 700;
+    color: #111;
+    display: block;
+  }
+  .metric-label {
+    font-size: 8pt;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .arch-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 0;
+    margin: 8pt 0 10pt;
+    align-items: stretch;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .arch-section {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .arch-box {
+    border: 2px solid #333;
+    border-radius: 5px;
+    padding: 8px 12px;
+    background: #f8f9fa;
+  }
+  .arch-box h4 {
+    font-size: 9.5pt;
+    margin-bottom: 3pt;
+    color: #111;
+  }
+  .arch-box .detail {
+    font-size: 8pt;
+    color: #555;
+    line-height: 1.4;
+  }
+  .arch-connector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    font-size: 7.5pt;
+    color: #888;
+  }
+  .arch-connector .arrow {
+    font-size: 14pt;
+    color: #333;
+    letter-spacing: -2px;
+  }
+  .arch-down {
+    grid-column: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4px 0;
+    font-size: 7.5pt;
+    color: #888;
+  }
+  .arch-down .arrow { font-size: 12pt; color: #333; }
+  .arch-bottom {
+    grid-column: 2 / 4;
+    justify-self: end;
+    width: 55%;
+  }
+  .arch-label {
+    grid-column: 1 / 4;
+    text-align: center;
+    font-size: 8pt;
+    color: #888;
+    margin-top: 4pt;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 6pt 0 10pt;
+    font-size: 9.5pt;
+  }
+  th {
+    background: #f5f5f5;
+    text-align: left;
+    padding: 5px 8px;
+    border: 1px solid #ddd;
+    font-weight: 600;
+  }
+  td {
+    padding: 4px 8px;
+    border: 1px solid #ddd;
+    vertical-align: top;
+  }
+  .footer {
+    margin-top: 16pt;
+    padding-top: 8pt;
+    border-top: 1px solid #ddd;
+    font-size: 8.5pt;
+    color: #888;
+  }
+  .page-break { page-break-before: always; }
+  strong { font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>PointDev: Open Structured Context Capture</h1>
+<p class="subtitle">Project detail attachment for NLnet NGI Zero Commons Fund application<br>
+Braeden Bihag, Almost a Lab S.L. | March 2026 | <a href="https://github.com/BraedenBDev/pointdev">github.com/BraedenBDev/pointdev</a></p>
+
+<div class="metrics">
+  <div class="metric">
+    <span class="metric-value">118</span>
+    <span class="metric-label">Commits</span>
+  </div>
+  <div class="metric">
+    <span class="metric-value">1,188</span>
+    <span class="metric-label">Unit Tests</span>
+  </div>
+  <div class="metric">
+    <span class="metric-value">86</span>
+    <span class="metric-label">Source Files</span>
+  </div>
+  <div class="metric">
+    <span class="metric-value">v0.1.0</span>
+    <span class="metric-label">Tagged Release</span>
+  </div>
+</div>
+
+<h2>The Problem</h2>
+
+<p>MCP, function calling, and tool use standardised how AI agents act on the world. No equivalent exists for the other direction: humans telling agents what they want with structural precision.</p>
+
+<p>A developer types "the hero font is too small." A client sends a Loom recording. A QA engineer files a ticket: "the text on the homepage? The big one?" Each message drops the DOM path, computed styles, component name, and spatial intent. Proprietary AI tools are building their own closed context capture. Without an open format now, structured human-to-AI communication locks into walled gardens.</p>
+
+<h2>Real Capture Output</h2>
+
+<p>Output from a capture session on a live site. Voice narration, spatial annotations, and cursor dwell data fused with DOM context:</p>
+
+<div class="capture-example">[00:06] "main hero is far too large"
+[00:23] "the scroll CTA is overlapping with the subtitle"
+1. [00:40] Circle around .lg\:min-h-\[100svh\] at (42, 1019)
+   - Dwelled 25.5s over h1.font-display.text-hero (during: "main hero")
+   - Dwelled 7.3s over div.absolute.bottom-10 (during: "scroll CTA")
+
+Element: h1.font-display.text-hero
+  React: &lt;HeroHeading&gt;
+  Selector: main &gt; section &gt; h1
+  Computed: font-size: 72px; line-height: 1.1; color: rgb(15, 23, 42)
+
+Console errors: 1
+  [00:02] TypeError: Cannot read properties of undefined (reading 'map')
+    at ProductGrid.tsx:42</div>
+
+<p>An AI agent reading this knows which elements the user means, what they want changed, and where they were looking while saying it.</p>
+
+<div class="arch-section">
+<h2>Architecture</h2>
+
+<p>Chrome MV3 extension with four cooperating contexts:</p>
+
+<div class="arch-grid">
+  <div class="arch-box">
+    <h4>Sidepanel (React 18 UI)</h4>
+    <div class="detail">Voice capture<br>Screenshot intelligence<br>Output formats</div>
+  </div>
+  <div class="arch-connector">
+    <span class="arrow">&larr;&rarr;</span>
+    <span>chrome.runtime<br>messages + port</span>
+  </div>
+  <div class="arch-box">
+    <h4>Service Worker (State coordinator)</h4>
+    <div class="detail">CaptureSession<br>Message routing<br>Screenshot capture</div>
+  </div>
+  <div class="arch-down">
+    <span class="arrow">&darr;</span>
+    <span>chrome.scripting</span>
+  </div>
+  <div class="arch-bottom arch-box">
+    <h4>Content Script (Injected per tab)</h4>
+    <div class="detail">Element selector, Canvas annotations, Cursor tracker, React inspector, Console/net capture</div>
+  </div>
+  <div class="arch-label">Message flow: Sidepanel &harr; Service Worker &harr; Content Script</div>
+</div>
+</div>
+
+<h2>What the PoC Implements</h2>
+
+<ul>
+  <li><strong>Bridge server + MCP tool handlers:</strong> WebSocket bridge delivers captures to AI tools, with handlers for <code>get_session</code>, <code>get_voice_transcript</code>, <code>get_annotations</code>, <code>get_screenshot</code></li>
+  <li><strong>Three output formats:</strong> plain text, JSON, Markdown with pluggable compiler architecture</li>
+  <li><strong>Console and network capture:</strong> monkey-patches <code>console.error</code>, <code>console.warn</code>, <code>fetch</code>, <code>XMLHttpRequest</code> in the MAIN world via script injection (avoids chrome.debugger warning bar)</li>
+  <li><strong>Screenshot intelligence:</strong> interest-scoring using frame differencing (30%), cursor dwell (25%), voice activity (35%) to auto-capture at moments of user attention</li>
+  <li><strong>Annotation tools:</strong> circle, arrow, freehand, rectangle with scroll anchoring</li>
+  <li><strong>On-device Whisper transcription:</strong> Transformers.js + Xenova/whisper-tiny.en, functional but needs production hardening</li>
+  <li><strong>Cursor dwell tracking:</strong> temporal correlation to voice segments</li>
+</ul>
+
+<h2>What This Grant Funds</h2>
+
+<p>Six milestones covering the remaining R&D to take a working PoC to production-quality open infrastructure:</p>
+
+<table>
+  <tr>
+    <th>#</th>
+    <th>Milestone</th>
+    <th>Days</th>
+    <th>Cost</th>
+  </tr>
+  <tr>
+    <td>M1</td>
+    <td><strong>Local Whisper transcription, production hardening.</strong> AudioWorklet migration, model download/caching UX, memory profiling, streaming audio exploration.</td>
+    <td>~20</td>
+    <td>€6,000</td>
+  </tr>
+  <tr>
+    <td>M2</td>
+    <td><strong>Open structured output format specification.</strong> Version the format, write spec document, align with W3C Web Annotation / MCP schemas, publish.</td>
+    <td>~12</td>
+    <td>€3,600</td>
+  </tr>
+  <tr>
+    <td>M3</td>
+    <td><strong>Accessibility context capture.</strong> ARIA roles, a11y tree, contrast ratios, WCAG violation detection. Adapt pi-annotate patterns (MIT).</td>
+    <td>~14</td>
+    <td>€4,200</td>
+  </tr>
+  <tr>
+    <td>M4</td>
+    <td><strong>Cross-framework detection (Vue + Svelte).</strong> vue-inspector.ts, svelte-inspector.ts following react-inspector.ts pattern, production build fallbacks.</td>
+    <td>~12</td>
+    <td>€3,600</td>
+  </tr>
+  <tr>
+    <td>M5</td>
+    <td><strong>Firefox cross-browser port.</strong> WebExtensions compatibility layer, sidebar_action alternative, CSP differences, testing.</td>
+    <td>~10</td>
+    <td>€3,000</td>
+  </tr>
+  <tr>
+    <td>M6</td>
+    <td><strong>Prompt compiler npm package + docs + community.</strong> Extract compiler as standalone lib, developer docs, test coverage, MCP ecosystem outreach, demo video.</td>
+    <td>~12</td>
+    <td>€3,600</td>
+  </tr>
+</table>
+
+<p><strong>Total:</strong> ~80 days (€24,000) + infrastructure/CI (€500) + contingency (€500) = <strong>€25,000</strong></p>
+<p>Rate: €300/day (solo developer, cost-recovery; commercial rate: €1,200/day). Self-funded to date.</p>
+
+<h2>Expected Outcomes</h2>
+
+<ul>
+  <li>A privacy-first browser extension with local voice transcription, working across Chrome and Firefox, detecting React/Vue/Svelte components, capturing accessibility context</li>
+  <li>A versioned, documented open format specification for structured context capture, the input-side counterpart to MCP, that any AI tool, accessibility auditor, or UX researcher can implement</li>
+  <li>A standalone prompt compiler library (npm) that merges technical and human context with temporal correlation</li>
+  <li>An MCP-compatible bridge server published as a formal MCP tool for Claude Code, Aider, and others</li>
+  <li>A format designed for sharing between stakeholders. The collaborative sharing infrastructure (relay, viewer, team features) is the trajectory for a follow-up grant</li>
+</ul>
+
+<p>If other tools adopt the format, PointDev succeeded. The extension is one implementation.</p>
+
+<div class="footer">
+  PointDev is MIT licensed. Repository: <a href="https://github.com/BraedenBDev/pointdev">github.com/BraedenBDev/pointdev</a><br>
+  AI-assisted development disclosed in repository: Co-Authored-By tags on all AI commits, per-session development log at docs/genai-disclosure/development-log.md
+</div>
+
+</body>
+</html>
