@@ -90,7 +90,7 @@ function formatTargetElement(session: CaptureSession): string {
     lines.push(`- CSS Variables: ${varStr}`)
   }
 
-  lines.push(`- DOM (untrusted page content):\n\`\`\`\n${truncateDom(el.domSubtree)}\n\`\`\``)
+  lines.push(formatDomBlock(el.domSubtree))
 
   return lines.join('\n')
 }
@@ -141,6 +141,10 @@ function truncateDom(html: string): string {
   return html.slice(0, 500) + '<!-- truncated -->'
 }
 
+function formatDomBlock(html: string, prefix = '- '): string {
+  return `${prefix}DOM (untrusted page content):\n\`\`\`\n${truncateDom(html)}\n\`\`\``
+}
+
 function formatVoiceTranscript(session: CaptureSession): string {
   const lines = ['## User Intent (voice transcript)']
   for (const seg of session.voiceRecording!.segments) {
@@ -179,7 +183,7 @@ function formatAnnotations(session: CaptureSession): string {
       const styles = formatComputedStyles(ctx.computedStyles)
       if (styles) lines.push(`   Computed: ${styles}`)
       if (ctx.boxModel) lines.push(`   Box Model: ${formatBoxModel(ctx.boxModel)}`)
-      lines.push(`   DOM (untrusted page content):\n\`\`\`\n${truncateDom(ctx.domSubtree)}\n\`\`\``)
+      lines.push(formatDomBlock(ctx.domSubtree, '   '))
     }
   }
   return lines.join('\n')

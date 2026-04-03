@@ -15,6 +15,8 @@ interface UseSpeechRecognitionReturn {
 }
 
 const MIC_GRANTED_KEY = 'pointdev_mic_granted'
+const MAX_RESTARTS = 5
+
 function getSpeechRecognitionAPI() {
   return typeof window !== 'undefined'
     ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
@@ -36,7 +38,6 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   const captureStartRef = useRef(0)
   const processedResultsRef = useRef(0)
   const restartCountRef = useRef(0)
-  const MAX_RESTARTS = 5
 
   // Check mic permission on mount
   useEffect(() => {

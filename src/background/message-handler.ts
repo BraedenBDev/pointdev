@@ -1,16 +1,13 @@
 import type { Message } from '@shared/messages'
-import type { AnnotationData, CursorSampleData, VoiceSegment } from '@shared/types'
+import type { AnnotationData, CaptureSession, CursorSampleData, VoiceSegment } from '@shared/types'
 import { distance } from '@shared/dwell'
 import type { SessionStore } from './session-store'
 
 /** Broadcast SESSION_UPDATED to all extension contexts (sidepanel, etc.)
  *  sendResponse only goes to the original sender — this ensures the sidepanel
  *  receives live updates during capture. */
-function broadcastSessionUpdate(store: SessionStore): void {
-  const session = store.getSession()
-  if (session) {
-    chrome.runtime.sendMessage({ type: 'SESSION_UPDATED', session }).catch(() => {})
-  }
+function broadcastSessionUpdate(session: CaptureSession): void {
+  chrome.runtime.sendMessage({ type: 'SESSION_UPDATED', session }).catch(() => {})
 }
 
 /** Resolve annotation index and build description parts for a screenshot. */
@@ -222,36 +219,35 @@ export async function handleMessage(
           text: message.data.segment.text,
         }).catch(() => {})
       }
-      broadcastSessionUpdate(store)
+      if (session) broadcastSessionUpdate(session)
       return session ? { type: 'SESSION_UPDATED', session } : undefined
     }
 
     case 'ELEMENT_SELECTED': {
       store.setSelectedElement(message.data)
       const session = store.getSession()
-      broadcastSessionUpdate(store)
+      if (session) broadcastSessionUpdate(session)
       return session ? { type: 'SESSION_UPDATED', session } : undefined
     }
 
     case 'ANNOTATION_ADDED': {
       store.addAnnotation(message.data)
       const session = store.getSession()
-      // Update floating card stats
       if (session) {
         chrome.tabs.sendMessage(session.tabId, {
           type: 'SESSION_STATS',
           annotationCount: session.annotations.length,
           screenshotCount: session.screenshots.length,
         }).catch(() => {})
+        broadcastSessionUpdate(session)
       }
-      broadcastSessionUpdate(store)
       return session ? { type: 'SESSION_UPDATED', session } : undefined
     }
 
     case 'CURSOR_BATCH': {
       store.addCursorBatch(message.data)
 
-      if (store.getSession()) {
+      if (store.hasSession()) {
         const dwellUpdate = detectRealtimeDwell(message.data)
         if (dwellUpdate) {
           chrome.runtime.sendMessage({
@@ -305,15 +301,14 @@ export async function handleMessage(
         }
 
         const updated = store.getSession()
-        // Update floating card stats after screenshot change
         if (updated) {
           chrome.tabs.sendMessage(updated.tabId, {
             type: 'SESSION_STATS',
             annotationCount: updated.annotations.length,
             screenshotCount: updated.screenshots.length,
           }).catch(() => {})
+          broadcastSessionUpdate(updated)
         }
-        broadcastSessionUpdate(store)
         return updated ? { type: 'SESSION_UPDATED', session: updated } : undefined
       } catch (err) {
         console.error('[PointDev] SCREENSHOT_REQUEST failed:', err)
@@ -322,7 +317,7 @@ export async function handleMessage(
     }
 
     case 'SNAPSHOT_REQUEST': {
-      if (!store.getSession()) return undefined
+      if (!store.hasSession()) return undefined
       try {
         const dataUrl = await chrome.tabs.captureVisibleTab({
           format: 'jpeg',
@@ -370,15 +365,14 @@ export async function handleMessage(
 
         store.addAnnotatedScreenshot(screenshot)
         const updated = store.getSession()
-        // Update floating card stats after screenshot added
         if (updated) {
           chrome.tabs.sendMessage(updated.tabId, {
             type: 'SESSION_STATS',
             annotationCount: updated.annotations.length,
             screenshotCount: updated.screenshots.length,
           }).catch(() => {})
+          broadcastSessionUpdate(updated)
         }
-        broadcastSessionUpdate(store)
         return updated ? { type: 'SESSION_UPDATED', session: updated } : undefined
       } catch (err) {
         console.error('[PointDev] SMART_SCREENSHOT_REQUEST failed:', err)

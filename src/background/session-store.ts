@@ -20,6 +20,10 @@ export class SessionStore {
     return { ...this.session }
   }
 
+  hasSession(): boolean {
+    return this.session !== null
+  }
+
   getSession(): CaptureSession | null {
     return this.session ? { ...this.session } : null
   }
@@ -123,7 +127,7 @@ export class SessionStore {
   }
 
   private debouncedPersist(): void {
-    if (this.persistTimer) return
+    if (this.persistTimer) clearTimeout(this.persistTimer)
     this.persistTimer = setTimeout(() => {
       this.persistTimer = null
       this.persistNow()
