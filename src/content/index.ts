@@ -41,6 +41,8 @@ let hoveredElement: Element | null = null
 let ancestryChain: Element[] = []
 let ancestryIndex = 0
 let highlightEl: HTMLElement | null = null
+let lastMouseMoveTime = 0
+const MOUSEMOVE_THROTTLE_MS = 50
 
 function handleClick(e: MouseEvent) {
   if (!isCapturing || currentMode !== 'select') return
@@ -88,14 +90,18 @@ function handleMouseDown(e: MouseEvent) {
 }
 
 function handleMouseMove(e: MouseEvent) {
-  // Update hovered element for ancestry cycling in select mode
+  // Update hovered element for ancestry cycling in select mode (throttled)
   if (isCapturing && currentMode === 'select') {
-    const el = findNearestElement(e.clientX, e.clientY, document)
-    if (el !== hoveredElement) {
-      hoveredElement = el
-      ancestryChain = el ? getAncestryChain(el) : []
-      ancestryIndex = 0
-      updateHighlight(el)
+    const now = Date.now()
+    if (now - lastMouseMoveTime >= MOUSEMOVE_THROTTLE_MS) {
+      lastMouseMoveTime = now
+      const el = findNearestElement(e.clientX, e.clientY, document)
+      if (el !== hoveredElement) {
+        hoveredElement = el
+        ancestryChain = el ? getAncestryChain(el) : []
+        ancestryIndex = 0
+        updateHighlight(el)
+      }
     }
   }
 

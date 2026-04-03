@@ -136,9 +136,7 @@ export class ScreenshotIntelligence {
     // Use direct base64→blob instead of fetch(dataUrl) which can fail in extension pages
     const [header, b64] = dataUrl.split(',')
     const mime = header.match(/:(.*?);/)?.[1] ?? 'image/jpeg'
-    const binary = atob(b64)
-    const bytes = new Uint8Array(binary.length)
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0))
     const img = await createImageBitmap(new Blob([bytes], { type: mime }))
     this.ctx.drawImage(img, 0, 0, SAMPLE_WIDTH, SAMPLE_HEIGHT)
     img.close()
@@ -173,7 +171,7 @@ export class ScreenshotIntelligence {
   }
 
   private computeFrameDiff(currentData: Uint8ClampedArray): number {
-    if (!this.prevFrameData) return 1.0 // First frame = max change
+    if (!this.prevFrameData) return 0 // First frame has no reference — report no change
 
     let changedPixels = 0
     let sampledPixels = 0

@@ -1,7 +1,7 @@
 import { pipeline, env } from '@xenova/transformers'
 
-// Disable local model check — always fetch from Hugging Face Hub
-env.allowLocalModels = false
+// Allow cached models to avoid re-downloading on every session
+env.allowLocalModels = true
 
 interface WorkerInMessage {
   type: 'init' | 'process_audio'

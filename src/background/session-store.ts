@@ -1,8 +1,17 @@
 import type { CaptureSession, SelectedElementData, AnnotationData, CursorSampleData, VoiceSegment, AnnotatedScreenshot, DeviceMetadata, ConsoleEntry, FailedRequest } from '@shared/types'
 import { createEmptySession } from '@shared/types'
 
+// Caps to prevent unbounded array growth during long sessions
+const MAX_CURSOR_TRACE = 2000
+const MAX_CONSOLE_ERRORS = 200
+const MAX_FAILED_REQUESTS = 100
+
+// Debounce persist to avoid excessive storage writes (cursor batches arrive at ~2Hz)
+const PERSIST_DEBOUNCE_MS = 2000
+
 export class SessionStore {
   private session: CaptureSession | null = null
+  private persistTimer: ReturnType<typeof setTimeout> | null = null
 
   startSession(tabId: number, url: string, title: string, viewport: { width: number; height: number }): CaptureSession {
     const id = `capture-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -41,7 +50,10 @@ export class SessionStore {
   addCursorBatch(samples: CursorSampleData[]): void {
     if (!this.session) return
     this.session.cursorTrace.push(...samples)
-    this.persist()
+    if (this.session.cursorTrace.length > MAX_CURSOR_TRACE) {
+      this.session.cursorTrace = this.session.cursorTrace.slice(-MAX_CURSOR_TRACE)
+    }
+    this.debouncedPersist()
   }
 
   setDeviceMetadata(device: DeviceMetadata): void {
@@ -76,13 +88,23 @@ export class SessionStore {
   addConsoleBatch(consoleBatch: ConsoleEntry[], requestBatch: FailedRequest[]): void {
     if (!this.session) return
     this.session.consoleErrors.push(...consoleBatch)
+    if (this.session.consoleErrors.length > MAX_CONSOLE_ERRORS) {
+      this.session.consoleErrors = this.session.consoleErrors.slice(-MAX_CONSOLE_ERRORS)
+    }
     this.session.failedRequests.push(...requestBatch)
-    this.persist()
+    if (this.session.failedRequests.length > MAX_FAILED_REQUESTS) {
+      this.session.failedRequests = this.session.failedRequests.slice(-MAX_FAILED_REQUESTS)
+    }
+    this.debouncedPersist()
   }
 
   endSession(): CaptureSession | null {
     const session = this.session
     this.session = null
+    if (this.persistTimer) {
+      clearTimeout(this.persistTimer)
+      this.persistTimer = null
+    }
     this.clearPersistedSession()
     return session
   }
@@ -100,7 +122,24 @@ export class SessionStore {
     return null
   }
 
+  private debouncedPersist(): void {
+    if (this.persistTimer) return
+    this.persistTimer = setTimeout(() => {
+      this.persistTimer = null
+      this.persistNow()
+    }, PERSIST_DEBOUNCE_MS)
+  }
+
   private persist(): void {
+    // Immediate persist for important state changes (element selected, annotations, etc.)
+    if (this.persistTimer) {
+      clearTimeout(this.persistTimer)
+      this.persistTimer = null
+    }
+    this.persistNow()
+  }
+
+  private persistNow(): void {
     try {
       const sessionForStorage = {
         ...this.session,
