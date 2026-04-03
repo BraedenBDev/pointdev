@@ -106,17 +106,17 @@ export async function handleMessage(
 
       // Create offscreen document for voice recognition
       try {
-        // Check if offscreen document already exists
-        const contexts = await (chrome.runtime as any).getContexts({
-          contextTypes: ['OFFSCREEN_DOCUMENT'],
-        })
-        if (!contexts || contexts.length === 0) {
-          await (chrome as any).offscreen.createDocument({
-            url: 'src/offscreen/offscreen.html',
-            reasons: ['USER_MEDIA' as any, 'WORKERS' as any],
-            justification: 'Voice recognition for capture session',
-          })
+        // Close any existing offscreen document first
+        try {
+          await (chrome as any).offscreen.closeDocument()
+        } catch {
+          // No existing document — that's fine
         }
+        await (chrome as any).offscreen.createDocument({
+          url: 'src/offscreen/offscreen.html',
+          reasons: ['USER_MEDIA' as any, 'WORKERS' as any],
+          justification: 'Voice recognition for capture session',
+        })
         // Wait for offscreen doc script to load
         await new Promise(r => setTimeout(r, 300))
         // Get engine preference from storage

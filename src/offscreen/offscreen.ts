@@ -108,13 +108,24 @@ function startWebSpeech() {
   }
 
   recognition.onerror = (event: any) => {
+    if (event.error === 'not-allowed') {
+      // Fatal — mic permission not available in offscreen doc, stop completely
+      chrome.runtime.sendMessage({ type: 'VOICE_ERROR', error: 'Microphone not allowed in offscreen document. Grant mic permission first.' })
+      const r = recognition
+      recognition = null
+      r.onresult = null
+      r.onerror = null
+      r.onend = null
+      try { r.stop() } catch {}
+      return
+    }
     if (event.error !== 'no-speech' && event.error !== 'aborted') {
       chrome.runtime.sendMessage({ type: 'VOICE_ERROR', error: 'Speech error: ' + event.error })
     }
   }
 
   recognition.onend = () => {
-    // Auto-restart for continuous recognition
+    // Auto-restart for continuous recognition (only if not stopped)
     if (recognition) {
       try { recognition.start() } catch { /* already stopped */ }
     }
