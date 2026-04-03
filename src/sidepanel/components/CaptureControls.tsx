@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { CaptureMode } from '@shared/messages'
+import { Button } from '@/components/ui/button'
 
 interface CaptureControlsProps {
   isCapturing: boolean
@@ -7,6 +8,14 @@ interface CaptureControlsProps {
   onStop: () => void
   onModeChange: (mode: CaptureMode) => void
 }
+
+const modes: { mode: CaptureMode; label: string; icon: string }[] = [
+  { mode: 'select', label: 'Select', icon: 'Select' },
+  { mode: 'circle', label: 'Circle', icon: '\u25CB' },
+  { mode: 'arrow', label: 'Arrow', icon: '\u2192' },
+  { mode: 'freehand', label: 'Freehand', icon: '\u270E' },
+  { mode: 'rectangle', label: 'Rectangle', icon: '\u25A1' },
+]
 
 export function CaptureControls({ isCapturing, onStart, onStop, onModeChange }: CaptureControlsProps) {
   const [mode, setMode] = useState<CaptureMode>('select')
@@ -18,54 +27,31 @@ export function CaptureControls({ isCapturing, onStart, onStop, onModeChange }: 
 
   if (!isCapturing) {
     return (
-      <button className="btn-primary" onClick={onStart}>
+      <Button size="full" onClick={onStart}>
         Start Capture
-      </button>
+      </Button>
     )
   }
 
   return (
-    <div className="capture-controls">
-      <div className="mode-toggle">
-        <button
-          className={`mode-btn ${mode === 'select' ? 'active' : ''}`}
-          onClick={() => handleModeChange('select')}
-          title="Select element"
-        >
-          Select
-        </button>
-        <button
-          className={`mode-btn ${mode === 'circle' ? 'active' : ''}`}
-          onClick={() => handleModeChange('circle')}
-          title="Draw circle"
-        >
-          &#9675;
-        </button>
-        <button
-          className={`mode-btn ${mode === 'arrow' ? 'active' : ''}`}
-          onClick={() => handleModeChange('arrow')}
-          title="Draw arrow"
-        >
-          &#8594;
-        </button>
-        <button
-          className={`mode-btn ${mode === 'freehand' ? 'active' : ''}`}
-          onClick={() => handleModeChange('freehand')}
-          title="Freehand draw"
-        >
-          &#9998;
-        </button>
-        <button
-          className={`mode-btn ${mode === 'rectangle' ? 'active' : ''}`}
-          onClick={() => handleModeChange('rectangle')}
-          title="Draw rectangle"
-        >
-          &#9633;
-        </button>
+    <div className="flex flex-col gap-2">
+      <div className="flex gap-1">
+        {modes.map(({ mode: m, label, icon }) => (
+          <Button
+            key={m}
+            variant={mode === m ? 'default' : 'tonal'}
+            size="sm"
+            onClick={() => handleModeChange(m)}
+            title={label}
+            className="flex-1 text-xs"
+          >
+            {m === 'select' ? label : icon}
+          </Button>
+        ))}
       </div>
-      <button className="btn-stop" onClick={onStop}>
+      <Button variant="destructive" size="full" onClick={onStop}>
         Stop Capture
-      </button>
+      </Button>
     </div>
   )
 }

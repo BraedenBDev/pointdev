@@ -35,16 +35,17 @@ export function LiveFeedback({ session, isListening, interimTranscript, transcri
   const timer = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 
   return (
-    <div className="live-feedback">
-      <div className="recording-indicator">
-        <span className="recording-dot" /> Recording {timer}
+    <div className="flex flex-col gap-2 mt-2">
+      <div className="flex items-center gap-1.5 font-medium text-sm">
+        <span className="w-2 h-2 bg-error rounded-full animate-pulse-dot" />
+        Recording {timer}
       </div>
 
       {session?.selectedElement && (
-        <div className="selected-element">
+        <div className="p-2 bg-surface-variant rounded-md text-xs">
           <strong>Selected:</strong> {session.selectedElement.selector}
           {session.selectedElement.reactComponent && (
-            <div className="component-name">
+            <div className="text-primary text-[11px]">
               Component: &lt;{session.selectedElement.reactComponent.name}&gt;
             </div>
           )}
@@ -52,10 +53,10 @@ export function LiveFeedback({ session, isListening, interimTranscript, transcri
       )}
 
       {session && session.annotations.length > 0 && (
-        <div className="annotations-list">
+        <div className="p-2 bg-surface-variant rounded-md text-xs">
           <strong>Annotations:</strong> {session.annotations.length}
           {session.annotations.map((ann, i) => (
-            <div key={i} className="annotation-item">
+            <div key={i} className="pl-3 text-muted">
               {annotationIcon(ann.type)} {ann.nearestElement || 'element'}
             </div>
           ))}
@@ -63,21 +64,21 @@ export function LiveFeedback({ session, isListening, interimTranscript, transcri
       )}
 
       {session && session.screenshots.length > 0 && (
-        <div className="screenshots-list" style={{ marginBottom: 10 }}>
-          <strong>Screenshots:</strong> {session.screenshots.length}
+        <div className="mb-2">
+          <strong className="text-xs">Screenshots:</strong> {session.screenshots.length}
           {session.screenshots.map((ss, i) => (
             <ScreenshotThumbnail key={i} screenshot={ss} size="small" />
           ))}
         </div>
       )}
 
-      <div className="transcript-live">
+      <div className="p-2 bg-surface-variant rounded-md text-xs">
         <strong>Transcript{isListening ? ' (live)' : ''}:</strong>
-        <div className="transcript-text">
+        <div className="mt-1">
           {transcript}
-          {interimTranscript && <span className="interim">{interimTranscript}</span>}
+          {interimTranscript && <span className="text-muted">{interimTranscript}</span>}
           {!transcript && !interimTranscript && (
-            <span className="placeholder">Speak to add voice context...</span>
+            <span className="text-muted italic">Speak to add voice context...</span>
           )}
         </div>
       </div>

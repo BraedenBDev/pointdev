@@ -51,11 +51,12 @@ describe('usePermissionStatus', () => {
     mockChrome.tabs.query.mockResolvedValue([{ url: 'chrome://extensions' }])
     const { result } = renderHook(() => usePermissionStatus())
     await waitFor(() => {
+      expect(result.current.permissions).toHaveLength(5)
       expect(result.current.canCapture).toBe(false)
+      const tabRow = result.current.permissions.find(p => p.name === 'Active Tab')
+      expect(tabRow?.status).toBe('error')
+      expect(tabRow?.label).toBe('Restricted')
     })
-    const tabRow = result.current.permissions.find(p => p.name === 'Active Tab')
-    expect(tabRow?.status).toBe('error')
-    expect(tabRow?.label).toBe('Restricted')
   })
 
   it('reports mic denied when permission query returns denied', async () => {

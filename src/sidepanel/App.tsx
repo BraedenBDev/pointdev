@@ -2,20 +2,14 @@ import { useRef, useEffect, useState } from 'react'
 import { useCaptureSession } from './hooks/useCaptureSession'
 import { useSpeechRecognition } from './hooks/useSpeechRecognition'
 import { useWhisperRecognition } from './hooks/useWhisperRecognition'
+import { usePermissionStatus } from './hooks/usePermissionStatus'
+import { IdleView } from './components/IdleView'
 import { CaptureControls } from './components/CaptureControls'
 import { LiveFeedback } from './components/LiveFeedback'
 import { OutputView } from './components/OutputView'
+import { Button } from '@/components/ui/button'
 
 type SpeechEngine = 'web-speech' | 'whisper'
-
-function toggleStyle(active: boolean): React.CSSProperties {
-  return {
-    padding: '3px 10px', fontSize: 11, borderRadius: 'var(--radius)',
-    border: '1px solid var(--border)', cursor: 'pointer',
-    background: active ? 'var(--accent)' : 'var(--code-bg)',
-    color: active ? '#fff' : 'var(--fg)',
-  }
-}
 
 export function App() {
   const { state, session, error, startCapture, stopCapture, setMode, reset, setVoiceSignal } = useCaptureSession()
@@ -23,14 +17,13 @@ export function App() {
   const webSpeech = useSpeechRecognition()
   const whisper = useWhisperRecognition()
   const speech = engine === 'whisper' ? whisper : webSpeech
+  const { permissions, canCapture, micGranted, requestMicPermission } = usePermissionStatus()
   const captureStartRef = useRef(0)
 
-  // Send transcript updates and feed voice signal to screenshot intelligence
   const lastSegmentCountRef = useRef(0)
   useEffect(() => {
     if (state !== 'capturing') return
 
-    // New final segment → send to service worker + signal intelligence
     if (speech.segments.length > lastSegmentCountRef.current) {
       const newSegment = speech.segments[speech.segments.length - 1]
       chrome.runtime.sendMessage({
@@ -42,7 +35,6 @@ export function App() {
       return
     }
 
-    // Interim transcript → voice-active signal while user is speaking
     setVoiceSignal(speech.interimTranscript.length > 0, speech.interimTranscript)
   }, [speech.segments, speech.transcript, speech.interimTranscript, state, setVoiceSignal])
 
@@ -60,49 +52,64 @@ export function App() {
     await stopCapture()
   }
 
+  // Complete state
   if (state === 'complete' && session) {
-    // Empty capture detection
     const hasContent = session.selectedElement || session.annotations.length > 0 ||
       (session.voiceRecording && session.voiceRecording.segments.length > 0)
     if (!hasContent) {
       return (
-        <div>
-          <div className="header">PointDev</div>
-          <div className="error-message">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center text-on-primary text-xs font-bold">P</div>
+            <div className="text-[15px] font-semibold text-on-surface">PointDev</div>
+          </div>
+          <div className="p-3 bg-error-container text-on-error-container rounded-md text-sm">
             No context captured. Try selecting an element or recording your voice.
           </div>
-          <button className="btn-primary" onClick={reset}>Try Again</button>
+          <Button size="full" onClick={reset}>Try Again</Button>
         </div>
       )
     }
     return <OutputView session={session} onBack={reset} />
   }
 
+  // Idle state
+  if (state === 'idle') {
+    return (
+      <IdleView
+        engine={engine}
+        onEngineChange={setEngine}
+        permissions={permissions}
+        canCapture={canCapture}
+        micGranted={micGranted}
+        onStart={handleStart}
+        onRequestMic={requestMicPermission}
+      />
+    )
+  }
+
+  // Preparing + Capturing states
   return (
-    <div>
-      <div className="header">PointDev</div>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center text-on-primary text-xs font-bold">P</div>
+        <div className="text-[15px] font-semibold text-on-surface">PointDev</div>
+      </div>
 
       {state === 'error' && error && (
-        <div className="error-message">{error}</div>
-      )}
-
-      {state === 'preparing' && (
-        <div className="preparing">Preparing capture...</div>
-      )}
-
-      {speech.micPermission === 'needs-setup' && (
-        <div style={{ marginBottom: 12 }}>
-          <button className="btn-primary" onClick={speech.requestMicPermission}>
-            Setup Microphone
-          </button>
-          <div style={{ marginTop: 4, fontSize: 11, color: 'var(--muted)' }}>
-            Required for voice narration. One-time setup.
-          </div>
+        <div className="p-3 bg-error-container text-on-error-container rounded-md text-sm">
+          {error}
         </div>
       )}
 
+      {state === 'preparing' && (
+        <div className="text-muted text-center py-5">Preparing capture...</div>
+      )}
+
       {speech.error && (
-        <div className="error-message">{speech.error}</div>
+        <div className="p-3 bg-error-container text-on-error-container rounded-md text-sm">
+          {speech.error}
+        </div>
       )}
 
       <CaptureControls
@@ -113,7 +120,7 @@ export function App() {
       />
 
       {state === 'capturing' && engine === 'whisper' && whisper.modelState === 'downloading' && (
-        <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
+        <div className="text-[11px] text-muted mb-2">
           Downloading speech model... {Math.round(whisper.downloadProgress * 100)}%
         </div>
       )}
@@ -126,26 +133,6 @@ export function App() {
           transcript={speech.transcript}
           captureStartedAt={captureStartRef.current}
         />
-      )}
-
-      {state === 'idle' && (
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>Speech engine:</div>
-          <div style={{ display: 'flex', gap: 4 }}>
-            <button onClick={() => setEngine('web-speech')} style={toggleStyle(engine === 'web-speech')}>
-              Fast (Google)
-            </button>
-            <button onClick={() => setEngine('whisper')} style={toggleStyle(engine === 'whisper')}>
-              Private (On-device)
-            </button>
-          </div>
-        </div>
-      )}
-
-      {state === 'idle' && (
-        <div style={{ marginTop: 16, color: 'var(--muted)', fontSize: 12 }}>
-          Click Start Capture, then talk, draw, and click on the page to capture structured context.
-        </div>
       )}
     </div>
   )
