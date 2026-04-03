@@ -12,7 +12,8 @@
     "rootDir": "src",
     "baseUrl": ".",
     "paths": {
-      "@shared/*": ["src/shared/*"]
+      "@shared/*": ["src/shared/*"],
+      "@/*": ["src/sidepanel/*"]
     }
   },
   "include": ["src/**/*", "tests/**/*"],
