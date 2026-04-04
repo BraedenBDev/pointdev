@@ -1,3 +1,12 @@
+/**
+ * WHISPER ON-DEVICE STT — UNDER DEVELOPMENT
+ *
+ * Status: Functional but too slow for production real-time use.
+ * Latency: ~6-8s per 3s audio chunk (single-threaded WASM).
+ * Constraint: Chrome MV3 CSP blocks blob: URLs needed for multi-threaded ONNX.
+ * Default: Web Speech API is the production voice engine.
+ * Tracking: https://github.com/BraedenBDev/pointdev/issues/43
+ */
 import { pipeline, env } from '@xenova/transformers'
 
 // Chrome extension workers can't access local filesystem — always fetch from Hub

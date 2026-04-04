@@ -883,9 +883,94 @@ After multiple iterations debugging Chrome extension constraints:
 5. Transcription is slow (~3-5s per 3s audio chunk) due to WASM single-thread fallback. Functional but not real-time.
 6. Tested and confirmed: on-device transcription produces usable output with zero cloud dependency.
 
+---
+
+## Session 13 — 2026-04-04: Full Audit Fix Sprint, UI/UX Design Pass, Whisper CSP Resolution
+
+**Model:** Claude Opus 4.6 (1M context) (Anthropic, via Claude Code CLI)
+**Human lead:** Braeden Bihag
+**AI role:** Self-orchestrated sprint executor, UI/UX auditor, integration debugger
+
+### What happened
+
+1. **47-finding audit fix sprint.** All findings from a comprehensive code audit (security, performance, architecture, test coverage) were fixed in 5 phased sprints with regular commits:
+   - Phase 1: SESSION_UPDATED broadcast — sidepanel wasn't receiving live state updates
+   - Phase 2: Security — CustomEvent nonce IPC channels, CSP hardening, bridge push gating, DOM sanitization, Whisper model ID allowlist
+   - Phase 3: Performance — Cap unbounded arrays (cursorTrace 2000, consoleErrors 200), debounce persist, throttle mousemove, fix first-frame diff
+   - Phase 4: Canvas resize handler, port reconnect guard, highlight div reuse, freehand points cap, voice restart backoff
+   - Phase 5: Test cleanup, /simplify review (debounce fix, hot-path alloc elimination)
+
+2. **Comprehensive UI/UX design pass.** Research agents gathered Chrome sidepanel best practices, WCAG AA requirements, and M3 compact density guidelines. A full audit agent reviewed every component. Changes:
+   - WCAG AA contrast compliance: muted color #888→#636363 (4.9:1), dark mode #9ca3af
+   - Eliminated all text under 12px (was 9-11px across 11+ instances)
+   - Body: 14px font, 16px padding, vertical scrolling enabled
+   - Screenshots: horizontal scroll → 2-col grid with aspect-video
+   - Containers: padding increased to clear rounded corners
+   - Accessibility: aria-pressed/aria-label on mode buttons, visible scrollbar thumb
+
+3. **Sidepanel/floating card role separation.** Braeden directed that the floating card (on-page) should have all controls (mode buttons, stop), and the sidepanel should be passive output only. Implemented by removing CaptureControls from the capturing view and adding CAPTURE_COMPLETE broadcast so sidepanel transitions correctly when floating card stops capture.
+
+4. **Whisper CSP resolution.** Debugged through 4 iterations of CSP errors:
+   - Added bare domains (huggingface.co, hf.co) alongside wildcards
+   - Added cdn.jsdelivr.net for ONNX Runtime WASM
+   - Discovered ONNX multi-threading spawns blob: URL workers (blocked by MV3 CSP)
+   - Fix: `env.backends.onnx.wasm.numThreads = 1` — single-threaded WASM
+   - Whisper loads and transcribes successfully but is too slow for real-time (~6-8s latency per utterance)
+
+5. **Screenshot intelligence tuning.** Interest threshold lowered from 0.4→0.3 so voice-only signals trigger captures. Rate-limited captureVisibleTab with 600ms minimum interval to avoid Chrome quota errors.
+
+6. **Analysis of output quality.** Reviewed a real capture session and identified systemic gaps:
+   - Voice segments and annotations not linked (separate lists, AI must cross-reference timestamps)
+   - CSS selectors are fragile nth-child chains, not semantic
+   - Screenshots can't be copied with text in a single action
+   - Web Speech misheard key terms ("Sierra work" instead of section name)
+
+### Decisions and rationale
+
+| Decision | Made by | Rationale |
+|---|---|---|
+| Floating card = controls, sidepanel = output | Braeden | User interacts with the page, not the sidepanel. Controls belong where the user is working. |
+| Whisper marked as under development | Braeden | Too slow for real-time intent matching. Web Speech is the production default. |
+| Lower screenshot threshold to 0.3 | AI | Voice alone (weight 0.35) was below old threshold (0.4), missing voice-triggered captures. Braeden confirmed screenshots were missing intent. |
+| Single-threaded ONNX | AI | MV3 CSP fundamentally blocks blob: worker URLs. No workaround exists. |
+| WCAG AA as minimum standard | AI | Muted text at 3.4:1 contrast was failing. Braeden confirmed text was unreadable in testing. |
+| Remove ScrollArea from code block | AI | ScrollArea was clipping text at rounded corners. Full page scrolling is more appropriate for sidepanel. |
+
+### What was AI-generated vs. human-authored
+
+- All code changes were AI-generated under human direction and testing
+- UI/UX design decisions were AI-researched (WCAG, M3, Chrome sidepanel best practices) and applied, with Braeden providing real-device testing feedback at each iteration
+- The sidepanel/floating card role separation was Braeden's architectural call
+- Whisper "under development" status decision was Braeden's after observing latency
+- GitHub issues (#39-43) were AI-drafted based on joint analysis of the output quality gaps
+- Analysis of capture output quality was AI-generated, validated by Braeden
+
+### Artifacts produced
+
+| Artifact | Path/Location | Status |
+|---|---|---|
+| 47 audit fixes | 9 commits on main | Complete |
+| UI/UX design pass | 12 component files | Complete |
+| Whisper CSP fix | manifest.json, whisper-worker.ts | Working (slow) |
+| Screenshot rate limiter | message-handler.ts | Complete |
+| GitHub issues | #39 (unified output), #40 (intent linking), #41 (selector quality), #43 (Whisper re-arch) | Open |
+| Test suite | 1224 tests across 156 files | All passing |
+
+### Test suite growth
+
+| Session | Tests | Test files |
+|---|---|---|
+| Session 4 (MVP) | 62 | 10 |
+| Session 10 | 775 | 98 |
+| Session 11 | 784 | 98 |
+| Session 12 | 1188 | 150 |
+| Session 13 (this session) | 1224 | 156 |
+
 ### Next steps
 
-- Optimize Whisper performance (WebGPU backend, larger chunks, model caching)
-- Wire MCP stdio transport in bridge server
-- Update README for new features
+- Unified output format with inline screenshots (#39)
+- Intent linking: merge voice segments with temporally-adjacent annotations (#40)
+- Improve CSS selector quality (#41)
+- MCP bridge as delivery mechanism for AI tool integration
+- Whisper re-architecture when ready (#43)
 

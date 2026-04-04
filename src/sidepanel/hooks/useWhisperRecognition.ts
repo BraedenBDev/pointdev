@@ -1,3 +1,8 @@
+/**
+ * UNDER DEVELOPMENT — Whisper on-device STT is functional but too slow for
+ * real-time use (~6-8s latency). Web Speech API is the production default.
+ * See: https://github.com/BraedenBDev/pointdev/issues/43
+ */
 import { useState, useCallback, useRef, useEffect } from 'react'
 import type { VoiceSegment } from '@shared/types'
 
