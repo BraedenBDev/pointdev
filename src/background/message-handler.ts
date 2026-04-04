@@ -10,6 +10,16 @@ function broadcastSessionUpdate(session: CaptureSession): void {
   chrome.runtime.sendMessage({ type: 'SESSION_UPDATED', session }).catch(() => {})
 }
 
+// Rate-limit captureVisibleTab to stay under Chrome's per-second quota
+let lastCaptureTime = 0
+const MIN_CAPTURE_INTERVAL_MS = 600
+async function rateLimitedCapture(opts?: { format?: string; quality?: number }): Promise<string | null> {
+  const now = Date.now()
+  if (now - lastCaptureTime < MIN_CAPTURE_INTERVAL_MS) return null
+  lastCaptureTime = now
+  return chrome.tabs.captureVisibleTab(opts as any)
+}
+
 /** Resolve annotation index and build description parts for a screenshot. */
 function buildAnnotationDesc(
   annotations: AnnotationData[],
@@ -276,7 +286,8 @@ export async function handleMessage(
 
       try {
         console.log('[PointDev] SCREENSHOT_REQUEST: calling captureVisibleTab')
-        const dataUrl = await chrome.tabs.captureVisibleTab()
+        const dataUrl = await rateLimitedCapture()
+        if (!dataUrl) return undefined
         console.log('[PointDev] SCREENSHOT_REQUEST: captured', dataUrl.length, 'chars')
         const { timestampMs, viewport, annotationIndex, selectedElementSelector, replacesPrevious } = message.data
 
@@ -322,10 +333,8 @@ export async function handleMessage(
     case 'SNAPSHOT_REQUEST': {
       if (!store.hasSession()) return undefined
       try {
-        const dataUrl = await chrome.tabs.captureVisibleTab({
-          format: 'jpeg',
-          quality: 30,
-        })
+        const dataUrl = await rateLimitedCapture({ format: 'jpeg', quality: 30 })
+        if (!dataUrl) return undefined
         return { dataUrl }
       } catch {
         return undefined
@@ -337,7 +346,8 @@ export async function handleMessage(
       if (!session) return undefined
 
       try {
-        const dataUrl = await chrome.tabs.captureVisibleTab()
+        const dataUrl = await rateLimitedCapture()
+        if (!dataUrl) return undefined
         const { trigger, interestScore, frameDiffRatio, dwellElement, dwellDurationMs, voiceSegment, annotationIndex, selectedElementSelector } = message.data
         const timestampMs = Date.now() - session.startedAt
 
