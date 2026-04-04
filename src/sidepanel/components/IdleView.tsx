@@ -40,8 +40,8 @@ export function IdleView({ engine, onEngineChange, permissions, canCapture, micG
       <div className="h-px bg-outline/60" />
 
       {/* Voice Engine */}
-      <div className="bg-surface-variant/50 rounded-xl p-3">
-        <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-2">
+      <div className="bg-surface-variant/50 rounded-xl p-4">
+        <div className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
           Voice Engine
         </div>
         <SegmentedButton
@@ -49,17 +49,17 @@ export function IdleView({ engine, onEngineChange, permissions, canCapture, micG
           value={engine}
           onChange={(v) => onEngineChange(v as SpeechEngine)}
         />
-        <div className="text-[10px] text-muted mt-2 leading-relaxed">
+        <div className="text-xs text-muted mt-2 leading-relaxed">
           {engineDescriptions[engine]}
         </div>
       </div>
 
       {/* Status */}
       <div>
-        <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-2 px-1">
+        <div className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
           Status
         </div>
-        <div className="flex flex-col gap-[5px]">
+        <div className="flex flex-col gap-1.5">
           {enrichedPermissions.map((perm) => (
             <PermissionRow key={perm.name} {...perm} />
           ))}
@@ -71,24 +71,23 @@ export function IdleView({ engine, onEngineChange, permissions, canCapture, micG
         size="full"
         onClick={onStart}
         disabled={!canCapture}
-        className="mt-1"
       >
         Start Capture
       </Button>
 
       {/* Warnings */}
       {!canCapture && (
-        <div className="text-[10px] text-error leading-relaxed px-1 -mt-2">
+        <div className="text-xs text-error leading-relaxed -mt-2">
           Cannot capture on this page. Navigate to a regular webpage.
         </div>
       )}
       {canCapture && !micGranted && (
-        <div className="text-[10px] text-warning leading-relaxed px-1 -mt-2">
-          ⚠ Voice narration unavailable — mic access needed.
+        <div className="text-xs text-on-surface leading-relaxed bg-warning/10 rounded-lg px-3 py-2 -mt-2">
+          Voice narration unavailable — mic access needed.
         </div>
       )}
 
-      <div className="text-[10px] text-muted leading-relaxed px-1">
+      <div className="text-xs text-muted leading-relaxed">
         Talk, draw, and click on the page to capture structured context for your AI coding tool.
       </div>
     </div>

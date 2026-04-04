@@ -26,7 +26,7 @@ export function PermissionRow({ name, status, label, action, onAction }: Permiss
       />
       <span
         className={cn(
-          "text-[11px] flex-1",
+          "text-xs flex-1",
           isError ? "text-on-error-container" : "text-on-surface-variant"
         )}
       >
@@ -35,14 +35,14 @@ export function PermissionRow({ name, status, label, action, onAction }: Permiss
       {action && onAction ? (
         <button
           onClick={onAction}
-          className="text-[10px] font-medium text-error underline cursor-pointer bg-transparent border-none p-0"
+          className="text-xs font-medium text-error underline cursor-pointer bg-transparent border-none p-0"
         >
           {action} →
         </button>
       ) : (
         <span
           className={cn(
-            "text-[10px] font-medium",
+            "text-xs font-medium",
             isError ? "text-error" : "text-primary"
           )}
         >

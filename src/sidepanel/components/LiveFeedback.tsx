@@ -32,19 +32,19 @@ export function LiveFeedback({ session, captureStartedAt }: LiveFeedbackProps) {
   const timer = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       {/* Timer */}
-      <div className="bg-surface-variant/50 rounded-xl px-3 py-2 flex items-center justify-between">
-        <span className="text-xs text-on-surface-variant">Duration</span>
-        <span className="text-sm font-semibold text-on-surface font-mono">{timer}</span>
+      <div className="bg-surface-variant/50 rounded-xl px-4 py-2.5 flex items-center justify-between">
+        <span className="text-sm text-on-surface-variant">Duration</span>
+        <span className="text-base font-semibold text-on-surface font-mono">{timer}</span>
       </div>
 
       {session?.selectedElement && (
-        <div className="bg-surface-variant/50 rounded-xl p-3">
-          <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-1">Selected</div>
-          <div className="text-xs text-on-surface-variant font-mono">{session.selectedElement.selector}</div>
+        <div className="bg-surface-variant/50 rounded-xl p-4">
+          <div className="text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">Selected</div>
+          <div className="text-sm text-on-surface-variant font-mono break-all">{session.selectedElement.selector}</div>
           {session.selectedElement.reactComponent && (
-            <div className="text-primary text-[11px] mt-0.5">
+            <div className="text-primary text-xs mt-1">
               &lt;{session.selectedElement.reactComponent.name}&gt;
             </div>
           )}
@@ -52,12 +52,12 @@ export function LiveFeedback({ session, captureStartedAt }: LiveFeedbackProps) {
       )}
 
       {session && session.annotations.length > 0 && (
-        <div className="bg-surface-variant/50 rounded-xl p-3">
-          <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-1">
+        <div className="bg-surface-variant/50 rounded-xl p-4">
+          <div className="text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
             Annotations ({session.annotations.length})
           </div>
           {session.annotations.map((ann, i) => (
-            <div key={i} className="text-xs text-on-surface-variant pl-2 py-0.5">
+            <div key={i} className="text-sm text-on-surface-variant pl-2 py-0.5">
               {annotationIcon(ann.type)} {ann.nearestElement || 'element'}
             </div>
           ))}
@@ -66,12 +66,12 @@ export function LiveFeedback({ session, captureStartedAt }: LiveFeedbackProps) {
 
       {session && session.screenshots.length > 0 && (
         <div>
-          <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-1.5 px-1">
+          <div className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
             Screenshots ({session.screenshots.length})
           </div>
-          <div className="flex gap-1.5 overflow-x-auto pb-1">
+          <div className="grid grid-cols-2 gap-3">
             {session.screenshots.map((ss, i) => (
-              <ScreenshotThumbnail key={i} screenshot={ss} size="small" />
+              <ScreenshotThumbnail key={i} screenshot={ss} />
             ))}
           </div>
         </div>

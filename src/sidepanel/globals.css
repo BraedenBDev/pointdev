@@ -14,7 +14,7 @@
 
   --color-outline: #e4e8ec;
   --color-outline-variant: #d5f9e8;
-  --color-muted: #888888;
+  --color-muted: #636363;
 
   --color-error: #d64545;
   --color-error-container: #fef4f4;
@@ -54,6 +54,8 @@
     --color-outline: rgba(255, 255, 255, 0.08);
     --color-outline-variant: rgba(29, 153, 114, 0.2);
 
+    --color-muted: #9ca3af;
+
     --color-error-container: rgba(214, 69, 69, 0.15);
     --color-on-error-container: #fca5a5;
 
@@ -64,11 +66,12 @@
 /* Base styles */
 body {
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-on-surface);
   background: var(--color-surface);
-  padding: 12px;
+  padding: 16px;
   line-height: 1.5;
+  overflow-x: hidden;
 }
 
 * {

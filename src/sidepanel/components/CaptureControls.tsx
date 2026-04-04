@@ -36,17 +36,19 @@ export function CaptureControls({ isCapturing, onStart, onStop, onModeChange }: 
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex gap-[5px] bg-surface-variant/50 rounded-xl p-[3px]">
+      <div className="flex gap-1 bg-surface-variant/50 rounded-xl p-1">
         {modes.map(({ mode: m, label, icon }) => (
           <button
             key={m}
             onClick={() => handleModeChange(m)}
             title={label}
+            aria-label={label}
+            aria-pressed={mode === m}
             className={cn(
-              "flex-1 py-[6px] text-center text-[10px] font-medium rounded-[9px] transition-all cursor-pointer border-none",
+              "flex-1 py-2 text-center text-xs font-medium rounded-lg transition-all cursor-pointer border-none",
               mode === m
                 ? "bg-primary text-on-primary shadow-sm"
-                : "bg-transparent text-muted hover:text-on-surface-variant"
+                : "bg-transparent text-on-surface-variant hover:text-on-surface"
             )}
           >
             {m === 'select' ? label : icon}

@@ -72,9 +72,9 @@ export function App() {
       (session.voiceRecording && session.voiceRecording.segments.length > 0)
     if (!hasContent) {
       return (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           <AppHeader />
-          <div className="p-3 bg-error-container text-on-error-container rounded-md text-sm">
+          <div className="p-4 bg-error-container text-on-error-container rounded-xl text-sm">
             No context captured. Try selecting an element or recording your voice.
           </div>
           <Button size="full" onClick={reset}>Try Again</Button>
@@ -101,13 +101,13 @@ export function App() {
 
   // Preparing + Capturing states (sidepanel stays open for voice)
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <AppHeader />
         {state === 'capturing' && (
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 bg-error rounded-full animate-pulse-dot" />
-            <span className="text-[11px] font-medium text-on-surface">Recording</span>
+            <span className="text-xs font-medium text-on-surface">Recording</span>
           </div>
         )}
       </div>
@@ -115,7 +115,7 @@ export function App() {
       <div className="h-px bg-outline/60" />
 
       {state === 'error' && error && (
-        <div className="p-3 bg-error-container text-on-error-container rounded-xl text-xs">
+        <div className="p-4 bg-error-container text-on-error-container rounded-xl text-sm">
           {error}
         </div>
       )}
@@ -125,17 +125,17 @@ export function App() {
       )}
 
       {speech.error && (
-        <div className="p-3 bg-error-container text-on-error-container rounded-xl text-xs">
+        <div className="p-4 bg-error-container text-on-error-container rounded-xl text-sm">
           {speech.error}
         </div>
       )}
 
       {state === 'capturing' && engine === 'whisper' && whisper.modelState === 'downloading' && (
-        <div className="bg-surface-variant/50 rounded-xl p-3">
-          <div className="text-[11px] text-muted">
+        <div className="bg-surface-variant/50 rounded-xl p-4">
+          <div className="text-xs text-muted">
             Downloading speech model... {Math.round(whisper.downloadProgress * 100)}%
           </div>
-          <div className="mt-1.5 h-1 bg-outline/40 rounded-full overflow-hidden">
+          <div className="mt-2 h-1.5 bg-outline/40 rounded-full overflow-hidden">
             <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${Math.round(whisper.downloadProgress * 100)}%` }} />
           </div>
         </div>
@@ -149,11 +149,11 @@ export function App() {
       />
 
       {state === 'capturing' && (
-        <div className="bg-surface-variant/50 rounded-xl p-3">
-          <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-1.5">
+        <div className="bg-surface-variant/50 rounded-xl p-4">
+          <div className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
             Transcript{speech.isListening ? ' (live)' : ''}
           </div>
-          <div className="text-xs text-on-surface-variant leading-relaxed">
+          <div className="text-sm text-on-surface-variant leading-relaxed">
             {speech.transcript}
             {speech.interimTranscript && <span className="text-muted"> {speech.interimTranscript}</span>}
             {!speech.transcript && !speech.interimTranscript && (

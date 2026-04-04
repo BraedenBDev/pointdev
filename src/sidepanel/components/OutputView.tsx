@@ -57,7 +57,7 @@ export function OutputView({ session, onBack }: OutputViewProps) {
   const durationSec = Math.round(durationMs / 1000)
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       <AppHeader
         title="Capture Complete"
         subtitle={`${session.url.replace(/^https?:\/\//, '').split('/')[0]} · ${durationSec}s · ${session.voiceRecording?.segments.length ?? 0} segments`}
@@ -67,17 +67,17 @@ export function OutputView({ session, onBack }: OutputViewProps) {
 
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="py-2.5 px-2 bg-surface-variant/50 border border-outline/40 rounded-xl text-center">
-          <div className="text-lg font-semibold text-on-surface leading-tight">{session.annotations.length}</div>
-          <div className="text-[9px] text-muted mt-0.5">Annotations</div>
+        <div className="py-3 px-3 bg-surface-variant/50 border border-outline/40 rounded-xl text-center">
+          <div className="text-xl font-semibold text-on-surface leading-tight">{session.annotations.length}</div>
+          <div className="text-xs text-muted mt-1">Annotations</div>
         </div>
-        <div className="py-2.5 px-2 bg-surface-variant/50 border border-outline/40 rounded-xl text-center">
-          <div className="text-lg font-semibold text-on-surface leading-tight">{session.screenshots.length}</div>
-          <div className="text-[9px] text-muted mt-0.5">Screenshots</div>
+        <div className="py-3 px-3 bg-surface-variant/50 border border-outline/40 rounded-xl text-center">
+          <div className="text-xl font-semibold text-on-surface leading-tight">{session.screenshots.length}</div>
+          <div className="text-xs text-muted mt-1">Screenshots</div>
         </div>
-        <div className="py-2.5 px-2 bg-surface-variant/50 border border-outline/40 rounded-xl text-center">
-          <div className="text-lg font-semibold text-on-surface leading-tight">{session.voiceRecording?.segments.length ?? 0}</div>
-          <div className="text-[9px] text-muted mt-0.5">Voice seg.</div>
+        <div className="py-3 px-3 bg-surface-variant/50 border border-outline/40 rounded-xl text-center">
+          <div className="text-xl font-semibold text-on-surface leading-tight">{session.voiceRecording?.segments.length ?? 0}</div>
+          <div className="text-xs text-muted mt-1">Voice seg.</div>
         </div>
       </div>
 
@@ -89,21 +89,21 @@ export function OutputView({ session, onBack }: OutputViewProps) {
       />
 
       {/* Output code block */}
-      <ScrollArea className="max-h-[40vh]">
-        <pre className="bg-code-bg text-code-text font-mono text-[10px] leading-[1.7] p-3.5 rounded-xl whitespace-pre-wrap break-words">
+      <ScrollArea className="max-h-[320px]">
+        <pre className="bg-code-bg text-code-text font-mono text-xs leading-relaxed p-4 pr-6 rounded-xl whitespace-pre-wrap break-words">
           {output}
         </pre>
       </ScrollArea>
 
-      {/* Screenshots */}
+      {/* Screenshots — 2-col grid */}
       {session.screenshots.length > 0 && (
         <div>
-          <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-2 px-1">
+          <div className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
             Screenshots
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-2">
+          <div className="grid grid-cols-2 gap-3">
             {session.screenshots.map((ss, i) => (
-              <ScreenshotThumbnail key={i} screenshot={ss} size="small" />
+              <ScreenshotThumbnail key={i} screenshot={ss} />
             ))}
           </div>
         </div>
@@ -119,8 +119,8 @@ export function OutputView({ session, onBack }: OutputViewProps) {
         </Button>
       </div>
 
-      <div className="text-[10px] text-muted px-1 pb-1">
-        Tip: Run <code className="font-mono text-primary">npx @pointdev/bridge</code> to stream sessions to AI tools via MCP
+      <div className="text-xs text-muted pb-1">
+        Tip: Run <code className="font-mono text-primary bg-primary-container/50 rounded px-1">npx @pointdev/bridge</code> to stream sessions to AI tools via MCP
       </div>
     </div>
   )

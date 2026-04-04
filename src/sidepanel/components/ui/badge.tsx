@@ -14,8 +14,8 @@ const badgeVariants = cva(
         dwell: "bg-amber-100 text-amber-700",
         annotation: "bg-emerald-100 text-emerald-700",
         multi: "bg-pink-100 text-pink-700",
-        "status-ok": "text-primary text-[10px] font-medium",
-        "status-error": "text-error text-[10px] font-medium",
+        "status-ok": "bg-transparent text-primary font-medium",
+        "status-error": "bg-transparent text-error font-medium",
       },
     },
     defaultVariants: {

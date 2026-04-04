@@ -1,80 +1,42 @@
-import { useState, useCallback } from 'react'
 import type { AnnotatedScreenshot } from '@shared/types'
 import { formatTimestamp } from '@shared/formatter'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 
 interface ScreenshotThumbnailProps {
   screenshot: AnnotatedScreenshot
-  size: 'small' | 'large'
 }
 
-export function ScreenshotThumbnail({ screenshot, size }: ScreenshotThumbnailProps) {
-  const [copied, setCopied] = useState(false)
-  const width = size === 'small' ? 120 : 240
-
-  const handleCopy = useCallback(async () => {
-    if (!screenshot.dataUrl) return
-    try {
-      const response = await fetch(screenshot.dataUrl)
-      const blob = await response.blob()
-      await navigator.clipboard.write([
-        new ClipboardItem({ 'image/png': blob }),
-      ])
-    } catch {
-      const desc = screenshot.descriptionParts.join(' | ')
-      const voice = screenshot.voiceContext ? ` — "${screenshot.voiceContext}"` : ''
-      await navigator.clipboard.writeText(desc + voice)
-    }
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }, [screenshot])
-
+export function ScreenshotThumbnail({ screenshot }: ScreenshotThumbnailProps) {
   const desc = screenshot.descriptionParts.join(' | ')
   const ts = formatTimestamp(screenshot.timestampMs)
 
   return (
-    <div className="mb-2">
+    <div>
       {screenshot.dataUrl ? (
         <img
           src={screenshot.dataUrl}
           alt={desc}
-          style={{ width }}
-          className="rounded-md border border-outline"
+          loading="lazy"
+          className="w-full aspect-video object-contain rounded-lg border border-outline bg-surface-variant"
         />
       ) : (
-        <div
-          style={{ width, height: width * 0.6 }}
-          className="bg-surface-variant rounded-md flex items-center justify-center text-[11px] text-muted"
-        >
+        <div className="w-full aspect-video bg-surface-variant rounded-lg flex items-center justify-center text-xs text-muted">
           Screenshot lost
         </div>
       )}
-      <div className="text-[11px] mt-1 flex items-center gap-1 flex-wrap">
+      <div className="text-xs mt-1.5 flex items-center gap-1 flex-wrap">
         <span className="text-muted">[{ts}]</span>
         {screenshot.trigger && (
           <Badge variant={screenshot.trigger as any}>
             {screenshot.trigger}
           </Badge>
         )}
-        <span className="text-on-surface-variant">{desc}</span>
       </div>
+      <div className="text-xs text-on-surface-variant mt-0.5 line-clamp-2">{desc}</div>
       {screenshot.voiceContext && (
-        <div className="text-[11px] italic text-muted">
+        <div className="text-xs italic text-muted mt-0.5">
           &ldquo;{screenshot.voiceContext}&rdquo;
         </div>
-      )}
-      {screenshot.signals && size === 'large' && (
-        <div className="text-[10px] text-muted mt-0.5">
-          {screenshot.signals.frameDiffRatio != null && `${Math.round(screenshot.signals.frameDiffRatio * 100)}% visual change`}
-          {screenshot.signals.dwellElement && ` | dwell: ${screenshot.signals.dwellElement}`}
-          {screenshot.interestScore != null && ` | score: ${screenshot.interestScore}`}
-        </div>
-      )}
-      {size === 'large' && (
-        <Button variant="tonal" size="sm" onClick={handleCopy} className="mt-1">
-          {copied ? 'Copied!' : 'Copy Image'}
-        </Button>
       )}
     </div>
   )
