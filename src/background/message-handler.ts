@@ -188,6 +188,9 @@ export async function handleMessage(
         await chrome.storage.session.set({ completedSession: finalSession })
       } catch {}
 
+      // Broadcast so sidepanel knows capture ended (e.g. when floating card triggers stop)
+      chrome.runtime.sendMessage({ type: 'CAPTURE_COMPLETE', session: finalSession }).catch(() => {})
+
       // Reopen sidepanel with results
       try {
         const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true })

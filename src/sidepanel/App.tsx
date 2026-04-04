@@ -5,7 +5,6 @@ import { useWhisperRecognition } from './hooks/useWhisperRecognition'
 import { usePermissionStatus } from './hooks/usePermissionStatus'
 import { AppHeader } from '@/components/ui/app-header'
 import { IdleView } from './components/IdleView'
-import { CaptureControls } from './components/CaptureControls'
 import { LiveFeedback } from './components/LiveFeedback'
 import { OutputView } from './components/OutputView'
 import { Button } from '@/components/ui/button'
@@ -52,6 +51,13 @@ export function App() {
     setVoiceSignal(speech.interimTranscript.length > 0, speech.interimTranscript)
   }, [speech.segments, speech.transcript, speech.interimTranscript, state, setVoiceSignal])
 
+  // Stop voice when capture ends (e.g. floating card stop button)
+  useEffect(() => {
+    if (state === 'complete' || state === 'idle') {
+      speech.stop()
+    }
+  }, [state, speech.stop])
+
   const handleStart = async () => {
     captureStartRef.current = Date.now()
     lastSegmentCountRef.current = 0
@@ -59,11 +65,6 @@ export function App() {
     if (ok && speech.isAvailable) {
       speech.start(captureStartRef.current)
     }
-  }
-
-  const handleStop = async () => {
-    speech.stop()
-    await stopCapture()
   }
 
   // Complete state
@@ -99,7 +100,8 @@ export function App() {
     )
   }
 
-  // Preparing + Capturing states (sidepanel stays open for voice)
+  // Preparing + Capturing states — sidepanel is passive display only
+  // All controls (mode buttons, stop) are on the floating card in the page
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -141,13 +143,6 @@ export function App() {
         </div>
       )}
 
-      <CaptureControls
-        isCapturing={state === 'capturing'}
-        onStart={handleStart}
-        onStop={handleStop}
-        onModeChange={setMode}
-      />
-
       {state === 'capturing' && (
         <div className="bg-surface-variant/50 rounded-xl p-4">
           <div className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
@@ -168,6 +163,12 @@ export function App() {
           session={session}
           captureStartedAt={captureStartRef.current}
         />
+      )}
+
+      {state === 'capturing' && (
+        <div className="text-xs text-muted text-center">
+          Use the floating card on the page to control capture
+        </div>
       )}
     </div>
   )

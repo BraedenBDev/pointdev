@@ -20,8 +20,7 @@ interface UseWhisperRecognitionReturn {
 
 export function useWhisperRecognition(): UseWhisperRecognitionReturn {
   const [isListening, setIsListening] = useState(false)
-  // Start as 'needs-setup' — mic is checked when user selects this engine, not on mount
-  const [micPermission, setMicPermission] = useState<'checking' | 'granted' | 'needs-setup'>('needs-setup')
+  const [micPermission, setMicPermission] = useState<'checking' | 'granted' | 'needs-setup'>('checking')
   const [transcript, setTranscript] = useState('')
   const [interimTranscript, setInterimTranscript] = useState('')
   const [segments, setSegments] = useState<VoiceSegment[]>([])
@@ -34,6 +33,26 @@ export function useWhisperRecognition(): UseWhisperRecognitionReturn {
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
   const processorRef = useRef<ScriptProcessorNode | null>(null)
   const captureStartRef = useRef(0)
+
+  // Check mic permission on mount — same approach as useSpeechRecognition
+  useEffect(() => {
+    async function checkMic() {
+      try {
+        const status = await navigator.permissions.query({ name: 'microphone' as PermissionName })
+        setMicPermission(status.state === 'granted' ? 'granted' : 'needs-setup')
+      } catch {
+        // permissions.query not available in this context — probe with getUserMedia
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+          stream.getTracks().forEach(t => t.stop())
+          setMicPermission('granted')
+        } catch {
+          setMicPermission('needs-setup')
+        }
+      }
+    }
+    checkMic()
+  }, [])
 
   const requestMicPermission = useCallback(async () => {
     try {

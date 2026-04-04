@@ -371,12 +371,16 @@ export class FloatingCard {
       document.addEventListener('mouseup', onUp)
     })
 
-    // Restore position
+    // Restore position, clamped to current viewport
     chrome.storage.local.get('pointdev_float_pos').then((data) => {
       const pos = data['pointdev_float_pos']
       if (pos) {
-        this.card.style.left = `${pos.left}px`
-        this.card.style.top = `${pos.top}px`
+        const maxLeft = window.innerWidth - 280
+        const maxTop = window.innerHeight - 100
+        const left = Math.max(0, Math.min(pos.left, maxLeft))
+        const top = Math.max(0, Math.min(pos.top, maxTop))
+        this.card.style.left = `${left}px`
+        this.card.style.top = `${top}px`
         this.card.style.right = 'auto'
         this.card.style.bottom = 'auto'
       }

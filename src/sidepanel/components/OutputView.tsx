@@ -5,7 +5,6 @@ import { computeDwells, collapseDwells } from '@shared/dwell'
 import { AppHeader } from '@/components/ui/app-header'
 import { Button } from '@/components/ui/button'
 import { SegmentedButton } from '@/components/ui/segmented-button'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { ScreenshotThumbnail } from './ScreenshotThumbnail'
 
 const formatOptions = [
@@ -89,11 +88,9 @@ export function OutputView({ session, onBack }: OutputViewProps) {
       />
 
       {/* Output code block */}
-      <ScrollArea className="max-h-[320px]">
-        <pre className="bg-code-bg text-code-text font-mono text-xs leading-relaxed p-4 pr-6 rounded-xl whitespace-pre-wrap break-words">
-          {output}
-        </pre>
-      </ScrollArea>
+      <pre className="bg-code-bg text-code-text font-mono text-xs leading-relaxed px-5 py-5 rounded-xl whitespace-pre-wrap break-words">
+        {output}
+      </pre>
 
       {/* Screenshots — 2-col grid */}
       {session.screenshots.length > 0 && (

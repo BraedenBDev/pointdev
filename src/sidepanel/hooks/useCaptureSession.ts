@@ -66,6 +66,14 @@ export function useCaptureSession() {
           }, 200)
         }
       } else if (message.type === 'CAPTURE_COMPLETE') {
+        // Clean up resources (stop may have been triggered externally, e.g. floating card)
+        if (intelligenceRef.current) {
+          intelligenceRef.current.stop()
+          intelligenceRef.current = null
+        }
+        portIntentionalRef.current = true
+        portRef.current?.disconnect()
+        portRef.current = null
         setSession(message.session)
         setState('complete')
       } else if (message.type === 'CAPTURE_ERROR') {

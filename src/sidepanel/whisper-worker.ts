@@ -1,7 +1,11 @@
 import { pipeline, env } from '@xenova/transformers'
 
-// Allow cached models to avoid re-downloading on every session
-env.allowLocalModels = true
+// Chrome extension workers can't access local filesystem — always fetch from Hub
+// The browser's HTTP cache handles repeat downloads automatically
+env.allowLocalModels = false
+
+// Disable multi-threaded WASM — Chrome MV3 CSP blocks blob: URLs needed for sub-workers
+env.backends.onnx.wasm.numThreads = 1
 
 interface WorkerInMessage {
   type: 'init' | 'process_audio'

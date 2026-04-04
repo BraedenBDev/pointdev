@@ -25,7 +25,7 @@ const SAMPLE_WIDTH = 160
 const SAMPLE_HEIGHT = 90
 const SAMPLE_INTERVAL_MS = 2000
 const COOLDOWN_MS = 3000
-const INTEREST_THRESHOLD = 0.4
+const INTEREST_THRESHOLD = 0.3
 // Sample every 4th pixel for frame diff (75% reduction in comparisons)
 const PIXEL_STRIDE = 4
 
