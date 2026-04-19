@@ -974,3 +974,54 @@ After multiple iterations debugging Chrome extension constraints:
 - MCP bridge as delivery mechanism for AI tool integration
 - Whisper re-architecture when ready (#43)
 
+## Session 14 — 2026-04-19: First External Contributor Engagement
+
+**Model:** Claude Opus 4.7 (1M context)
+**Human lead:** Braeden Bihag
+**AI role:** Context gathering, draft authoring with stop-slop pass, posting comments under Braeden's direction
+
+### What happened
+
+1. **First external collaborator surfaced.** GitHub user m13v (mediar-ai, authors of Terminator and fazm) starred the repo and left substantive technical comments on issues #41 (CSS selector quality) and #43 (Whisper STT re-architecture).
+
+2. **Feedback ingested on #41.** m13v proposed (a) flipping aria-label above data-testid in the priority chain because accessibility linters produce better coverage than intentional testids, (b) guarding React component name capture against minification (`displayName` survives, anonymous arrows get mangled to single chars), (c) emitting composite selectors with OR fallback logic rather than picking a single strategy. Linked their Rust implementation at `mediar-ai/terminator/crates/terminator/src/element.rs`.
+
+3. **Feedback ingested on #43.** m13v endorsed Option D (Web Speech default, Whisper opt-in) as the correct current call and Option C (Web Speech real-time + Whisper post-refinement) as the next evolution. Recommended tiny/base Whisper models for the real-time path. Linked their Swift implementation at `m13v/fazm/Desktop/Sources/TranscriptionService.swift`.
+
+4. **Verified feedback against codebase.** Confirmed that `whisper-worker.ts:40-41` already defaults to `whisper-tiny.en` — the model size lever is spent; the real constraint is `numThreads=1` forced by MV3 CSP at line 17. Confirmed `react-inspector.ts:37` already reads `displayName || name`, so minification handling is partial and needs a mangled-name guard. Confirmed `css-selector-generator` ships a single output at `src/content/index.ts:11-25`, matching the brittle path m13v described.
+
+5. **Drafted and posted responses.** Each reply engages a specific technical point, cites the exact file in the repo where the gap lives, and ends with a targeted follow-up question grounded in the responder's shipped code (element.rs consumer API shape, fazm transcript reconciliation strategy). Both drafts passed a stop-slop pass: no em-dashes, no filler adverbs, active voice throughout, specific file references rather than abstractions.
+
+### Decisions and rationale
+
+| Decision | Made by | Rationale |
+|---|---|---|
+| Engage substantively rather than acknowledge-only | Braeden | First external contributor on an NLnet-track project. Technical depth in the response signals seriousness and invites continued collaboration. |
+| Ask follow-up questions in each reply | Braeden | Keeps the conversation open and surfaces knowledge from someone who has shipped the same problem domain in production. |
+| Run drafts through stop-slop before posting | Braeden | Output should read as authored by Braeden, not by a pattern-matching assistant. AI tells would undermine credibility with a technical collaborator. |
+| Don't mention Claude Code in the responses | Braeden | The collaborator is engaging with Braeden; AI tooling is irrelevant to the conversation. |
+
+### What was AI-generated vs. human-authored
+
+- Codebase research (file reads, grep for css-selector-generator, whisper model defaults) was AI-executed
+- First-pass response drafts were AI-generated
+- Stop-slop pass was AI-applied per the stop-slop skill rules
+- Editorial direction (add follow-up questions, add codebase context, add roadmap context, match Braeden's voice) was Braeden's
+- Final posted comments were AI-authored under Braeden's review and approval
+- The decision to engage this contributor deeply rather than with a generic acknowledgement was Braeden's
+
+### Artifacts produced
+
+| Artifact | Path/Location | Status |
+|---|---|---|
+| Comment on #41 | github.com/BraedenBDev/pointdev/issues/41#issuecomment-4274977256 | Posted |
+| Comment on #43 | github.com/BraedenBDev/pointdev/issues/43#issuecomment-4274977422 | Posted |
+| Dev log entry | this file | Complete |
+
+### Next steps
+
+- Read `mediar-ai/terminator/crates/terminator/src/element.rs` to inform the composite selector design for #41
+- Read `m13v/fazm/Desktop/Sources/TranscriptionService.swift` for the hybrid reconciliation pattern for #43
+- Action plan for #41 (semantic selector priority chain + composite OR emission + mangled-name guard) when prioritized
+- Action plan for #43 (AudioWorklet migration + post-capture Whisper pass + Web Speech / Whisper diff reconciliation) blocked on infra work
+
