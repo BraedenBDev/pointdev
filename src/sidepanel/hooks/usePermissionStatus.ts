@@ -107,6 +107,16 @@ export function usePermissionStatus() {
     }
 
     check()
+    // Re-check when the user switches tabs or navigates — the status is per-tab
+    const onUpdated = (_id: number, info: chrome.tabs.TabChangeInfo) => {
+      if (info.url || info.status === 'complete') check()
+    }
+    chrome.tabs.onActivated.addListener(check)
+    chrome.tabs.onUpdated.addListener(onUpdated)
+    return () => {
+      chrome.tabs.onActivated.removeListener(check)
+      chrome.tabs.onUpdated.removeListener(onUpdated)
+    }
   }, [micGranted])
 
   return { permissions, canCapture, micGranted, requestMicPermission }

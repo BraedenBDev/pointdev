@@ -1040,6 +1040,8 @@ After multiple iterations debugging Chrome extension constraints:
 
 3. **Fix.** On `getUserMedia` failure, the hook now opens `mic-permission.html`. It also listens for `MIC_PERMISSION_GRANTED` and flips the row to Granted.
 
+4. **Follow-up bug: stale Active Tab status.** After granting the mic, the side panel showed Active Tab "Restricted" and Start Capture disabled on a normal page. The status check only re-ran when `micGranted` changed, so it ran while the permission tab (a `chrome-extension://` URL) was still active and never updated after that tab closed. The hook now re-checks on `chrome.tabs.onActivated` and `chrome.tabs.onUpdated`. These events need no extra manifest permission.
+
 ### Decisions and rationale
 
 | Decision | Made by | Rationale |
@@ -1056,7 +1058,7 @@ After multiple iterations debugging Chrome extension constraints:
 | Artifact | Path/Location | Status |
 |---|---|---|
 | Hook fix | `src/sidepanel/hooks/usePermissionStatus.ts` | Complete, tests pass (562) |
-| Regression test | `tests/sidepanel/hooks/usePermissionStatus.test.ts` | Complete |
+| Regression tests (tab fallback, tab-switch re-check) | `tests/sidepanel/hooks/usePermissionStatus.test.ts` | Complete, 563 passing |
 
 ### Next steps
 

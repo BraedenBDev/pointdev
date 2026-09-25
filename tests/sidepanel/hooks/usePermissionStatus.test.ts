@@ -7,6 +7,8 @@ const mockChrome = {
   tabs: {
     query: vi.fn(),
     get: vi.fn(),
+    onActivated: { addListener: vi.fn(), removeListener: vi.fn() },
+    onUpdated: { addListener: vi.fn(), removeListener: vi.fn() },
   },
   runtime: {
     sendMessage: vi.fn(),
@@ -143,5 +145,17 @@ describe('usePermissionStatus', () => {
     const { result } = renderHook(() => usePermissionStatus())
     await result.current.requestMicPermission()
     expect(open).toHaveBeenCalledWith('chrome-extension://id/mic-permission.html')
+  })
+
+  it('re-checks the active tab when the user switches tabs', async () => {
+    mockChrome.tabs.get.mockResolvedValue({ id: 1, url: 'chrome-extension://id/mic-permission.html' })
+    const { result } = renderHook(() => usePermissionStatus())
+    await waitFor(() => expect(result.current.permissions).toHaveLength(4))
+    expect(result.current.canCapture).toBe(false)
+
+    mockChrome.tabs.get.mockResolvedValue({ id: 2, url: 'https://example.com' })
+    const onActivated = mockChrome.tabs.onActivated.addListener.mock.calls.at(-1)![0]
+    onActivated()
+    await waitFor(() => expect(result.current.canCapture).toBe(true))
   })
 })
