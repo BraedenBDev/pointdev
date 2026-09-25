@@ -1042,11 +1042,22 @@ After multiple iterations debugging Chrome extension constraints:
 
 4. **Follow-up bug: stale Active Tab status.** After granting the mic, the side panel showed Active Tab "Restricted" and Start Capture disabled on a normal page. The status check only re-ran when `micGranted` changed, so it ran while the permission tab (a `chrome-extension://` URL) was still active and never updated after that tab closed. The hook now re-checks on `chrome.tabs.onActivated` and `chrome.tabs.onUpdated`. These events need no extra manifest permission.
 
+5. **Follow-up bug: capture output had no screenshots and no Device section.** Braeden pasted a compiled prompt from a 15-second voice capture that contained only Context and the voice transcript.
+   - **Screenshots:** commit 7f99b0a added a 600ms rate limit to `captureVisibleTab` that returned `null` when a capture came too soon. The side panel's screenshot intelligence sends a low-quality `SNAPSHOT_REQUEST` for frame diffing, and when it scores the frame as interesting it sends `SMART_SCREENSHOT_REQUEST` tens of milliseconds later. That second request always fell inside the 600ms window and was dropped, so smart screenshots never landed. Fix: snapshots are still dropped when busy, but real screenshots now wait for their slot.
+   - **Device:** the content script sent `DEVICE_METADATA` before replying to `INJECT_CAPTURE`, and the service worker only calls `startSession()` after that reply arrives. The metadata reached a store with no session and was discarded. Fix: device metadata now travels in the `INJECT_CAPTURE` response, and the `DEVICE_METADATA` message type was removed.
+   - **Cursor dwell (first pass, wrong):** the AI initially reported no code cause and suggested the user may have kept the pointer moving. Braeden asked for a deeper pass ("ultrathink").
+   - **Cursor dwell (root cause):** `CursorTracker` only recorded samples on `mousemove`, and a resting pointer fires no `mousemove` events. A dwell therefore left no samples while it was happening; it could only be inferred afterwards from the last sample before the rest and the first sample after it. The 100ms throttle regularly discarded the position where the pointer actually stopped, so the last recorded sample could sit more than 30px (the dwell radius) from the rest point, and the dwell was lost. The service worker's live dwell detector also only runs when samples arrive, so it never fired during a rest, and dwell-weighted smart screenshots could not trigger. Fix: the tracker keeps the latest pointer position on every move and samples it on each 500ms batch tick when no sample was taken in the last 100ms. It stops when the pointer leaves the page (`mouseout` with no `relatedTarget`) or the tab is hidden, and skips positions over PointDev's floating card so pausing on its Stop button is not reported as page dwell. Two regression tests failed on the old tracker and pass now.
+
+6. **Screenshot storage question and PDF export.** Braeden asked where screenshots are saved. They are not saved anywhere: they live as data URLs in the in-memory session and the side panel's thumbnails, are stripped from the `chrome.storage.session` backup and the bridge push, and the Markdown export links to `screenshot-N.jpg` files that are never written. Braeden asked for a way to export everything as a PDF. Added an Export PDF button to the output view: it opens a report tab (the full text prompt plus every screenshot at full width with its timestamp, trigger, description and voice context) and opens Chrome's print dialog, where "Save as PDF" writes the file. All page-derived text is HTML-escaped because the report tab runs at the extension origin. Layout checked by rendering a sample report with headless Chrome's print-to-PDF. The in-extension flow (open tab, print dialog) was not exercised.
+
 ### Decisions and rationale
 
 | Decision | Made by | Rationale |
 |---|---|---|
 | Fix the hook the button uses rather than rewire the button to the speech hook | AI | Smallest change. It also keeps the status row's `micGranted` state in sync through the broadcast message. |
+| Make screenshots wait for the rate-limit slot instead of dropping them | AI | Keeps the quota protection from 7f99b0a. Only the disposable frame-diff snapshots are dropped. |
+| PDF via Chrome's print dialog rather than a PDF library such as jsPDF | AI | No new dependency and no bundle growth; keeps everything client-side per the zero-operating-cost constraint. Cost: one extra click on "Save as PDF" instead of a direct download. |
+| Sample a resting pointer at the 500ms batch rate rather than every 100ms | AI | Enough for the 1s dwell threshold and the 800ms live detector, while keeping idle trace growth low against the 2000-sample cap. |
 
 ### What was AI-generated vs. human-authored
 
@@ -1058,7 +1069,10 @@ After multiple iterations debugging Chrome extension constraints:
 | Artifact | Path/Location | Status |
 |---|---|---|
 | Hook fix | `src/sidepanel/hooks/usePermissionStatus.ts` | Complete, tests pass (562) |
-| Regression tests (tab fallback, tab-switch re-check) | `tests/sidepanel/hooks/usePermissionStatus.test.ts` | Complete, 563 passing |
+| Regression tests (tab fallback, tab-switch re-check) | `tests/sidepanel/hooks/usePermissionStatus.test.ts` | Complete |
+| Screenshot and device fixes | `src/background/message-handler.ts`, `src/content/index.ts` | Complete; both new tests fail on the previous code |
+| PDF export | `src/sidepanel/lib/pdf-report.ts`, `src/sidepanel/components/OutputView.tsx`, `tests/sidepanel/lib/pdf-report.test.ts` | Complete, 571 tests passing; not yet verified in Chrome |
+| Dwell sampling fix | `src/content/cursor-tracker.ts`, `tests/content/cursor-tracker.test.ts` | Complete, 569 tests passing; not yet verified in Chrome |
 
 ### Next steps
 
