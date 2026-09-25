@@ -1050,6 +1050,10 @@ After multiple iterations debugging Chrome extension constraints:
 
 6. **Screenshot storage question and PDF export.** Braeden asked where screenshots are saved. They are not saved anywhere: they live as data URLs in the in-memory session and the side panel's thumbnails, are stripped from the `chrome.storage.session` backup and the bridge push, and the Markdown export links to `screenshot-N.jpg` files that are never written. Braeden asked for a way to export everything as a PDF. Added an Export PDF button to the output view: it opens a report tab (the full text prompt plus every screenshot at full width with its timestamp, trigger, description and voice context) and opens Chrome's print dialog, where "Save as PDF" writes the file. All page-derived text is HTML-escaped because the report tab runs at the extension origin. Layout checked by rendering a sample report with headless Chrome's print-to-PDF. The in-extension flow (open tab, print dialog) was later verified in Chrome by Braeden.
 
+7. **Markdown export screenshot links.** After Braeden confirmed items 1–6 in Chrome, fixed the remaining gap: the Markdown export linked to `screenshot-N.jpg` files that were never written, used `.jpg` although full screenshots are PNG, and rendered an empty heading for pages without a `<title>`. Copied Markdown now has no image links (a relative link in pasted text can never resolve; captions stay in the body). In Markdown mode, a new "Download Markdown + N screenshots" button saves the `.md` and each screenshot into Downloads under a shared name prefix, so the links resolve side by side. The image extension comes from the data URL's real type. It uses anchor downloads, so no `downloads` permission was added; Chrome asks once to allow multiple downloads. A generated bundle was written to disk to confirm the link resolves, which also exposed a pre-existing bug: `---` directly under the body's last line rendered as a setext heading underline. Added the blank line.
+
+8. **Correction: test counts in this entry were inflated.** Vitest had no `include` pattern, so it also ran stale copies of the suite in agent worktrees under `.claude/worktrees/`. Two of those worktrees were removed during the session (not by the AI), and the count fell from 571 to 321 with no failures, which exposed it. The project's own suite is 27 files and 193 tests after this session's additions. The 562–571 figures above count those worktree copies. `vite.config.ts` now restricts tests to `tests/**`.
+
 ### Decisions and rationale
 
 | Decision | Made by | Rationale |
@@ -1057,6 +1061,7 @@ After multiple iterations debugging Chrome extension constraints:
 | Fix the hook the button uses rather than rewire the button to the speech hook | AI | Smallest change. It also keeps the status row's `micGranted` state in sync through the broadcast message. |
 | Make screenshots wait for the rate-limit slot instead of dropping them | AI | Keeps the quota protection from 7f99b0a. Only the disposable frame-diff snapshots are dropped. |
 | PDF via Chrome's print dialog rather than a PDF library such as jsPDF | AI | No new dependency and no bundle growth; keeps everything client-side per the zero-operating-cost constraint. Cost: one extra click on "Save as PDF" instead of a direct download. |
+| Copied Markdown drops image links; a separate download saves .md + images together | AI | Relative links can only resolve next to real files. Anchor downloads avoid adding the `downloads` permission, which CLAUDE.md flags for Web Store review. |
 | Sample a resting pointer at the 500ms batch rate rather than every 100ms | AI | Enough for the 1s dwell threshold and the 800ms live detector, while keeping idle trace growth low against the 2000-sample cap. |
 
 ### What was AI-generated vs. human-authored
@@ -1072,6 +1077,8 @@ After multiple iterations debugging Chrome extension constraints:
 | Regression tests (tab fallback, tab-switch re-check) | `tests/sidepanel/hooks/usePermissionStatus.test.ts` | Complete |
 | Screenshot and device fixes | `src/background/message-handler.ts`, `src/content/index.ts` | Complete; both new tests fail on the previous code |
 | PDF export | `src/sidepanel/lib/pdf-report.ts`, `src/sidepanel/components/OutputView.tsx`, `tests/sidepanel/lib/pdf-report.test.ts` | Complete, 571 tests passing; verified in Chrome by Braeden |
+| Markdown bundle download | `src/sidepanel/lib/markdown-export.ts`, `src/shared/formatter.ts`, `src/sidepanel/components/OutputView.tsx`, tests | Complete, 193 tests passing; not yet verified in Chrome |
+| Vitest scope fix | `vite.config.ts` | Complete |
 | Dwell sampling fix | `src/content/cursor-tracker.ts`, `tests/content/cursor-tracker.test.ts` | Complete, 569 tests passing; verified in Chrome by Braeden |
 
 ### Next steps
