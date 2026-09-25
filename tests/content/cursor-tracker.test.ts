@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { CursorTracker } from '../../src/content/cursor-tracker'
 import type { CursorSampleData } from '@shared/types'
+import { computeDwells } from '@shared/dwell'
 
 describe('CursorTracker', () => {
   let tracker: CursorTracker
@@ -171,5 +172,63 @@ describe('CursorTracker', () => {
     vi.advanceTimersByTime(600)
 
     expect(batchCallback).not.toHaveBeenCalled()
+  })
+
+  function allSamples(remaining: CursorSampleData[]): CursorSampleData[] {
+    return batchCallback.mock.calls
+      .reduce((acc: CursorSampleData[], call: [CursorSampleData[]]) => acc.concat(call[0]), [] as CursorSampleData[])
+      .concat(remaining)
+  }
+
+  it('registers a dwell when the throttle drops the position the pointer came to rest at', () => {
+    tracker.start(Date.now(), doc, win)
+    fireMouseMove(100, 100)          // sampled
+    vi.advanceTimersByTime(50)
+    fireMouseMove(160, 100)          // throttled — pointer rests here, 60px from the last sample
+    vi.advanceTimersByTime(2000)     // resting: no mousemove events fire
+    fireMouseMove(162, 100)          // resumes
+    vi.advanceTimersByTime(100)
+    fireMouseMove(400, 100)          // moves away
+
+    const dwells = computeDwells(allSamples(tracker.stop())).filter(s => s.dwellMs)
+    expect(dwells.length).toBeGreaterThan(0)
+    expect(dwells[0].x).toBe(160)
+    expect(dwells[0].dwellMs).toBeGreaterThanOrEqual(1000)
+  })
+
+  it('samples a resting pointer so dwells are visible while they happen', () => {
+    tracker.start(Date.now(), doc, win)
+    fireMouseMove(200, 200)
+    vi.advanceTimersByTime(1500)     // pointer never moves again
+
+    const samples = allSamples([])
+    expect(samples.length).toBeGreaterThanOrEqual(3)
+    expect(computeDwells(samples).some(s => (s.dwellMs ?? 0) >= 1000)).toBe(true)
+  })
+
+  it('stops sampling a resting pointer once it leaves the page', () => {
+    tracker.start(Date.now(), doc, win)
+    fireMouseMove(200, 200)
+    doc.dispatchEvent(new MouseEvent('mouseout', { relatedTarget: null, bubbles: true }))
+    vi.advanceTimersByTime(1500)
+
+    expect(allSamples(tracker.stop())).toHaveLength(1)
+  })
+
+  it('does not sample the pointer over the floating card', () => {
+    const host = document.createElement('div')
+    host.setAttribute('data-pointdev-float', '')
+    document.body.appendChild(host)
+    const orig = document.elementFromPoint
+    document.elementFromPoint = () => host
+    try {
+      tracker.start(Date.now(), doc, win)
+      fireMouseMove(10, 10)
+      vi.advanceTimersByTime(1500)
+      expect(allSamples(tracker.stop())).toHaveLength(0)
+    } finally {
+      document.elementFromPoint = orig
+      host.remove()
+    }
   })
 })

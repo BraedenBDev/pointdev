@@ -10,6 +10,8 @@ export class CursorTracker {
   private onBatch: (samples: CursorSampleData[]) => void
   private doc: Document | null = null
   private handleMouseMove: ((e: MouseEvent) => void) | null = null
+  private handleMouseOut: ((e: MouseEvent) => void) | null = null
+  private lastPointer: { clientX: number; clientY: number } | null = null
 
   constructor(onBatch: (samples: CursorSampleData[]) => void) {
     this.onBatch = onBatch
@@ -18,28 +20,45 @@ export class CursorTracker {
   start(captureStartedAt: number, doc: Document, win: Window): void {
     this.buffer = []
     this.doc = doc
+    this.lastPointer = null
 
-    this.handleMouseMove = (e: MouseEvent) => {
-      const now = Date.now()
-      if (now - this.lastSampleTime < SAMPLE_INTERVAL_MS) return
+    const record = (now: number) => {
+      const { clientX, clientY } = this.lastPointer!
+      // Pausing over PointDev's own floating card (e.g. before clicking Stop) isn't page dwell
+      const el = typeof doc.elementFromPoint === 'function' ? doc.elementFromPoint(clientX, clientY) : null
+      if (el?.closest('[data-pointdev-float]')) return
       this.lastSampleTime = now
-
-      const pageX = e.clientX + win.scrollX
-      const pageY = e.clientY + win.scrollY
-
-      const nearestSelector = resolveNearestSelector(e.clientX, e.clientY, doc)
-
       this.buffer.push({
-        x: pageX,
-        y: pageY,
+        x: clientX + win.scrollX,
+        y: clientY + win.scrollY,
         timestampMs: now - captureStartedAt,
-        nearestElement: nearestSelector,
+        nearestElement: resolveNearestSelector(clientX, clientY, doc),
       })
     }
 
+    this.handleMouseMove = (e: MouseEvent) => {
+      this.lastPointer = { clientX: e.clientX, clientY: e.clientY }
+      const now = Date.now()
+      if (now - this.lastSampleTime < SAMPLE_INTERVAL_MS) return
+      record(now)
+    }
+
+    // relatedTarget is null when the pointer leaves the page (e.g. into the side panel)
+    this.handleMouseOut = (e: MouseEvent) => {
+      if (!e.relatedTarget) this.lastPointer = null
+    }
+
     doc.addEventListener('mousemove', this.handleMouseMove)
+    doc.addEventListener('mouseout', this.handleMouseOut)
 
     this.intervalId = win.setInterval(() => {
+      // A resting pointer fires no mousemove events, so sample its last position here.
+      // Without this, dwells — the pointer holding still — leave no samples, and the
+      // position the throttle dropped just before the pointer stopped is never recorded.
+      const now = Date.now()
+      if (this.lastPointer && doc.visibilityState !== 'hidden' && now - this.lastSampleTime >= SAMPLE_INTERVAL_MS) {
+        record(now)
+      }
       if (this.buffer.length > 0) {
         this.onBatch([...this.buffer])
         this.buffer = []
@@ -48,11 +67,14 @@ export class CursorTracker {
   }
 
   stop(): CursorSampleData[] {
-    if (this.doc && this.handleMouseMove) {
+    if (this.doc && this.handleMouseMove && this.handleMouseOut) {
       this.doc.removeEventListener('mousemove', this.handleMouseMove)
+      this.doc.removeEventListener('mouseout', this.handleMouseOut)
       this.handleMouseMove = null
+      this.handleMouseOut = null
       this.doc = null
     }
+    this.lastPointer = null
     if (this.intervalId != null) {
       clearInterval(this.intervalId)
       this.intervalId = null
