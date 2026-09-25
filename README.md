@@ -144,7 +144,7 @@ flowchart LR
     SW -- SESSION_UPDATED --> SP
 ```
 
-**Sidepanel (React):** Capture controls, live feedback, voice transcription (Web Speech API runs here directly), screenshot thumbnails with copy-to-clipboard, compiled output display.
+**Sidepanel (React):** Capture controls, live feedback, voice transcription (Web Speech API runs here directly), screenshot thumbnails, compiled output display with copy-to-clipboard and PDF export (full prompt plus full-size screenshots, via Chrome's print dialog).
 
 **Service Worker:** Coordinates state between sidepanel and content script. Holds the `CaptureSession`, routes messages, captures screenshots via `captureVisibleTab` (both full-resolution for storage and low-quality JPEG for frame differencing), runs real-time dwell detection, injects main-world console/network capture script.
 
@@ -252,6 +252,7 @@ Screenshots are only captured during active capture sessions you explicitly star
 - [x] Smart screenshots via multi-signal intelligence (frame diff + dwell + voice + annotations)
 - [x] Console errors + failed network request capture (main-world injection)
 - [x] Compiled structured output with copy-to-clipboard
+- [x] PDF export of the full capture — prompt text plus every screenshot at full size
 - [x] Local speech-to-text via Whisper — on-device, zero cloud dependency ([#7](https://github.com/BraedenBDev/pointdev/issues/7))
 - [x] Pluggable output formats: Text, JSON, Markdown ([#10](https://github.com/BraedenBDev/pointdev/issues/10))
 - [x] Bridge server for AI tool delivery via WebSocket + MCP ([#12](https://github.com/BraedenBDev/pointdev/issues/12))

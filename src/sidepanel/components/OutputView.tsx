@@ -6,6 +6,7 @@ import { AppHeader } from '@/components/ui/app-header'
 import { Button } from '@/components/ui/button'
 import { SegmentedButton } from '@/components/ui/segmented-button'
 import { ScreenshotThumbnail } from './ScreenshotThumbnail'
+import { exportPdf } from '../lib/pdf-report'
 
 const formatOptions = [
   { value: 'text', label: 'Text' },
@@ -110,6 +111,14 @@ export function OutputView({ session, onBack }: OutputViewProps) {
       <div className="flex gap-2">
         <Button size="full" onClick={handleCopy}>
           {copied ? 'Copied!' : `Copy ${format === 'text' ? '' : format.toUpperCase() + ' '}to Clipboard`}
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => exportPdf(session, formatSession(sessionWithDwells))}
+          className="shrink-0 px-5"
+          aria-label="Export as PDF"
+        >
+          PDF
         </Button>
         <Button variant="outline" onClick={onBack} className="shrink-0 px-5">
           New
