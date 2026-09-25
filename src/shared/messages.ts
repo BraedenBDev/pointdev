@@ -1,4 +1,4 @@
-import type { SelectedElementData, AnnotationData, CursorSampleData, VoiceSegment, CaptureSession, DeviceMetadata, ConsoleEntry, FailedRequest, ScreenshotTrigger } from './types'
+import type { SelectedElementData, AnnotationData, CursorSampleData, VoiceSegment, CaptureSession, ConsoleEntry, FailedRequest, ScreenshotTrigger } from './types'
 export type { ScreenshotTrigger } from './types'
 
 export type Message =
@@ -24,7 +24,6 @@ export type Message =
   | { type: 'ANNOTATION_ADDED'; data: AnnotationData }
   | { type: 'CURSOR_BATCH'; data: CursorSampleData[] }
   | { type: 'SCREENSHOT_REQUEST'; data: { timestampMs: number; viewport: { scrollX: number; scrollY: number }; annotationIndex?: number; selectedElementSelector?: string; replacesPrevious: boolean } }
-  | { type: 'DEVICE_METADATA'; data: DeviceMetadata }
   | { type: 'CONSOLE_BATCH'; data: { entries: ConsoleEntry[]; requests: FailedRequest[] } }
   | { type: 'PONG' }
 

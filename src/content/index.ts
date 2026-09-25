@@ -328,12 +328,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       return false // synchronous response
     case 'INJECT_CAPTURE':
       startCapture()
-      chrome.runtime.sendMessage({ type: 'DEVICE_METADATA', data: collectDeviceMetadata(window) })
       sendResponse({
         ok: true,
         url: window.location.href,
         title: document.title,
         viewport: { width: window.innerWidth, height: window.innerHeight },
+        device: collectDeviceMetadata(window),
       })
       return false // synchronous response
     case 'REMOVE_CAPTURE':

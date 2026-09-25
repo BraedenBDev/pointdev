@@ -10,13 +10,21 @@ function broadcastSessionUpdate(session: CaptureSession): void {
   chrome.runtime.sendMessage({ type: 'SESSION_UPDATED', session }).catch(() => {})
 }
 
-// Rate-limit captureVisibleTab to stay under Chrome's per-second quota
+// Rate-limit captureVisibleTab to stay under Chrome's per-second quota.
+// Frame-diff snapshots are disposable and get dropped when too soon; real screenshots
+// wait for their slot instead — they usually arrive right after the snapshot that
+// triggered them, so dropping them meant smart screenshots never landed.
 let lastCaptureTime = 0
 const MIN_CAPTURE_INTERVAL_MS = 600
-async function rateLimitedCapture(opts?: { format?: string; quality?: number }): Promise<string | null> {
+async function rateLimitedCapture(
+  opts?: { format?: string; quality?: number },
+  { dropIfBusy = false } = {},
+): Promise<string | null> {
   const now = Date.now()
-  if (now - lastCaptureTime < MIN_CAPTURE_INTERVAL_MS) return null
-  lastCaptureTime = now
+  const waitMs = Math.max(0, lastCaptureTime + MIN_CAPTURE_INTERVAL_MS - now)
+  if (waitMs > 0 && dropIfBusy) return null
+  lastCaptureTime = now + waitMs
+  if (waitMs > 0) await new Promise(r => setTimeout(r, waitMs))
   return chrome.tabs.captureVisibleTab(opts as any)
 }
 
@@ -117,6 +125,9 @@ export async function handleMessage(
         pageInfo?.title || fullTab.title || '',
         pageInfo?.viewport || { width: fullTab.width || 1200, height: fullTab.height || 800 }
       )
+      // Device metadata rides on the INJECT_CAPTURE response — a separate message
+      // would arrive before startSession() and be dropped
+      if (pageInfo?.device) store.setDeviceMetadata(pageInfo.device)
 
       // Reset dwell detector for new session
       resetDwellDetector()
@@ -272,11 +283,6 @@ export async function handleMessage(
       return undefined
     }
 
-    case 'DEVICE_METADATA': {
-      store.setDeviceMetadata(message.data)
-      return undefined
-    }
-
     case 'SCREENSHOT_REQUEST': {
       const session = store.getSession()
       if (!session) {
@@ -333,7 +339,7 @@ export async function handleMessage(
     case 'SNAPSHOT_REQUEST': {
       if (!store.hasSession()) return undefined
       try {
-        const dataUrl = await rateLimitedCapture({ format: 'jpeg', quality: 30 })
+        const dataUrl = await rateLimitedCapture({ format: 'jpeg', quality: 30 }, { dropIfBusy: true })
         if (!dataUrl) return undefined
         return { dataUrl }
       } catch {

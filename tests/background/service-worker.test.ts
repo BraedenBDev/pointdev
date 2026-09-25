@@ -103,4 +103,18 @@ describe('handleMessage', () => {
     expect(result).toBeUndefined()
     expect(store.getSession()?.cursorTrace).toHaveLength(2)
   })
+
+  it('stores device metadata from the INJECT_CAPTURE response', async () => {
+    const device = { browser: { name: 'Chrome', version: '140' }, os: 'macOS' } as any
+    vi.mocked(chrome.tabs.sendMessage).mockResolvedValue({ ok: true, url: 'https://example.com', title: 'Test', viewport: { width: 1200, height: 800 }, device })
+    await handleMessage({ type: 'START_CAPTURE' }, store)
+    expect(store.getSession()?.device).toEqual(device)
+  })
+
+  it('captures a smart screenshot requested right after a frame-diff snapshot', async () => {
+    store.startSession(1, 'https://example.com', 'Test', { width: 1200, height: 800 })
+    await handleMessage({ type: 'SNAPSHOT_REQUEST' }, store)
+    await handleMessage({ type: 'SMART_SCREENSHOT_REQUEST', data: { trigger: 'voice', interestScore: 0.35, frameDiffRatio: 0 } } as any, store)
+    expect(store.getSession()?.screenshots).toHaveLength(1)
+  })
 })
