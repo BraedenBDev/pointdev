@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { SegmentedButton } from '@/components/ui/segmented-button'
 import { ScreenshotThumbnail } from './ScreenshotThumbnail'
 import { exportPdf } from '../lib/pdf-report'
+import { downloadMarkdownBundle } from '../lib/markdown-export'
 
 const formatOptions = [
   { value: 'text', label: 'Text' },
@@ -105,6 +106,13 @@ export function OutputView({ session, onBack }: OutputViewProps) {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Copied Markdown can't carry images — this saves the .md with its screenshots beside it */}
+      {format === 'markdown' && session.screenshots.length > 0 && (
+        <Button variant="outline" size="full" onClick={() => downloadMarkdownBundle(sessionWithDwells)}>
+          Download Markdown + {session.screenshots.length} screenshot{session.screenshots.length === 1 ? '' : 's'}
+        </Button>
       )}
 
       {/* Actions */}

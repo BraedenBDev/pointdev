@@ -16,11 +16,11 @@ describe('formatSessionMarkdown', () => {
     expect(md).toContain('https://example.com')
   })
 
-  it('includes screenshot references as image placeholders', () => {
-    const session = {
+  function withScreenshot() {
+    return {
       ...createEmptySession('test', 1, 'https://example.com', 'Test', { width: 1440, height: 900 }),
       screenshots: [{
-        dataUrl: 'data:image/jpeg;base64,abc',
+        dataUrl: 'data:image/png;base64,abc',
         timestampMs: 3000,
         viewport: { scrollX: 0, scrollY: 0 },
         annotationIndices: [],
@@ -29,7 +29,23 @@ describe('formatSessionMarkdown', () => {
         interestScore: 0.7,
       }],
     }
-    const md = formatSessionMarkdown(session)
-    expect(md).toContain('![Screenshot 1]')
+  }
+
+  it('links screenshots to the saved image files', () => {
+    const md = formatSessionMarkdown(withScreenshot(), ['pointdev-example.com-1.png'])
+    expect(md).toContain('![Screenshot 1](pointdev-example.com-1.png)')
+    expect(md).toContain('*[00:03] Auto-captured*')
+    expect(md).toContain('\n\n---\n')
+  })
+
+  it('emits no image links when no files are saved (copied Markdown)', () => {
+    const md = formatSessionMarkdown(withScreenshot())
+    expect(md).not.toContain('![')
+    expect(md).toContain('## Screenshots')
+  })
+
+  it('falls back to the host when the page has no title', () => {
+    const session = createEmptySession('test', 1, 'https://example.com/a/b', '', { width: 1440, height: 900 })
+    expect(formatSessionMarkdown(session)).toMatch(/^# PointDev Capture — example\.com\n/)
   })
 })

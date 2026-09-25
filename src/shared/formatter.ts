@@ -370,23 +370,28 @@ export function formatSessionJSON(session: CaptureSession): string {
   return JSON.stringify(result, null, 2)
 }
 
-export function formatSessionMarkdown(session: CaptureSession): string {
+/**
+ * @param imageFiles file name per screenshot, when the images are saved next to the .md
+ *   (see markdown-export.ts). Without it, no image links are emitted — a relative link
+ *   in copied Markdown can never resolve. Screenshot captions are in the body either way.
+ */
+export function formatSessionMarkdown(session: CaptureSession, imageFiles?: (string | undefined)[]): string {
   // Expects cursorTrace already collapsed by caller (OutputView)
-  const header = `# PointDev Capture — ${session.title}\n\n` +
+  const title = session.title || session.url.replace(/^https?:\/\//, '').split('/')[0]
+  const header = `# PointDev Capture — ${title}\n\n` +
     `> Captured from [${session.url}](${session.url}) on ${new Date(session.startedAt).toISOString().replace('T', ' ').slice(0, 19)}\n`
 
   const body = formatSession(session)
 
   let screenshotSection = ''
-  if (session.screenshots.length > 0) {
-    const lines = ['\n---\n\n## Screenshot Attachments\n']
-    for (let i = 0; i < session.screenshots.length; i++) {
-      const s = session.screenshots[i]
-      const ts = formatTimestamp(s.timestampMs)
-      const desc = s.descriptionParts.join(' | ')
-      lines.push(`![Screenshot ${i + 1}](screenshot-${i + 1}.jpg)`)
-      lines.push(`*[${ts}] ${desc}*\n`)
-    }
+  if (imageFiles?.some(Boolean)) {
+    // Blank line before --- so it's a rule, not a setext heading underline on the body's last line
+    const lines = ['\n\n---\n\n## Screenshot Attachments\n']
+    session.screenshots.forEach((s, i) => {
+      if (!imageFiles[i]) return
+      lines.push(`![Screenshot ${i + 1}](${imageFiles[i]})`)
+      lines.push(`*[${formatTimestamp(s.timestampMs)}] ${s.descriptionParts.join(' | ')}*\n`)
+    })
     screenshotSection = lines.join('\n')
   }
 
