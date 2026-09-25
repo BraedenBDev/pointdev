@@ -19,8 +19,18 @@ export function usePermissionStatus() {
       stream.getTracks().forEach(t => t.stop())
       setMicGranted(true)
     } catch {
-      // Permission denied
+      // Side panels can't show the permission prompt — grant it from a tab instead
+      window.open(chrome.runtime.getURL('mic-permission.html'))
     }
+  }, [])
+
+  // mic-permission.html broadcasts this once the user allows access
+  useEffect(() => {
+    const listener = (message: { type?: string }) => {
+      if (message.type === 'MIC_PERMISSION_GRANTED') setMicGranted(true)
+    }
+    chrome.runtime.onMessage.addListener(listener)
+    return () => chrome.runtime.onMessage.removeListener(listener)
   }, [])
 
   useEffect(() => {

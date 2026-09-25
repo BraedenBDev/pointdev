@@ -10,6 +10,8 @@ const mockChrome = {
   },
   runtime: {
     sendMessage: vi.fn(),
+    getURL: vi.fn((path: string) => `chrome-extension://id/${path}`),
+    onMessage: { addListener: vi.fn(), removeListener: vi.fn() },
   },
 }
 
@@ -130,5 +132,16 @@ describe('usePermissionStatus', () => {
   it('provides requestMicPermission callback', async () => {
     const { result } = renderHook(() => usePermissionStatus())
     expect(typeof result.current.requestMicPermission).toBe('function')
+  })
+
+  it('opens the mic-permission tab when the side panel cannot prompt', async () => {
+    Object.defineProperty(navigator, 'mediaDevices', {
+      value: { getUserMedia: vi.fn().mockRejectedValue(new Error('NotAllowedError')) },
+      configurable: true,
+    })
+    const open = vi.spyOn(window, 'open').mockReturnValue(null)
+    const { result } = renderHook(() => usePermissionStatus())
+    await result.current.requestMicPermission()
+    expect(open).toHaveBeenCalledWith('chrome-extension://id/mic-permission.html')
   })
 })

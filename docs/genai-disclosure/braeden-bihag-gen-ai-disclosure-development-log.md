@@ -1025,3 +1025,39 @@ After multiple iterations debugging Chrome extension constraints:
 - Action plan for #41 (semantic selector priority chain + composite OR emission + mangled-name guard) when prioritized
 - Action plan for #43 (AudioWorklet migration + post-capture Whisper pass + Web Speech / Whisper diff reconciliation) blocked on infra work
 
+
+## Session 15 — 2026-09-26: Microphone Setup Button Fix
+
+**Model:** Claude Opus 5.5 (1M context)
+**Human lead:** Braeden Bihag
+**AI role:** Bug diagnosis, fix, regression test
+
+### What happened
+
+1. **Bug reported.** Braeden sent a screenshot: clicking "Setup" on the Microphone status row in the side panel did nothing. No permission prompt appeared.
+
+2. **Root cause.** The IdleView Setup button is wired to `usePermissionStatus.requestMicPermission`, not to the speech hooks. That function called `getUserMedia` inside the side panel, where Chrome does not show the permission prompt, and swallowed the rejection. Unlike `useSpeechRecognition.requestMicPermission`, it never opened the `mic-permission.html` fallback tab. It also never listened for `MIC_PERMISSION_GRANTED`, so the status row would not have updated even if permission had been granted elsewhere.
+
+3. **Fix.** On `getUserMedia` failure, the hook now opens `mic-permission.html`. It also listens for `MIC_PERMISSION_GRANTED` and flips the row to Granted.
+
+### Decisions and rationale
+
+| Decision | Made by | Rationale |
+|---|---|---|
+| Fix the hook the button uses rather than rewire the button to the speech hook | AI | Smallest change. It also keeps the status row's `micGranted` state in sync through the broadcast message. |
+
+### What was AI-generated vs. human-authored
+
+- Diagnosis, code change and test were AI-generated
+- Bug report and screenshot were Braeden's
+
+### Artifacts produced
+
+| Artifact | Path/Location | Status |
+|---|---|---|
+| Hook fix | `src/sidepanel/hooks/usePermissionStatus.ts` | Complete, tests pass (562) |
+| Regression test | `tests/sidepanel/hooks/usePermissionStatus.test.ts` | Complete |
+
+### Next steps
+
+- Manual verification in Chrome after reloading the extension
