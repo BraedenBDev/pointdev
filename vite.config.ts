@@ -17,5 +17,7 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./tests/setup.ts'],
+    // Agent worktrees under .claude/ hold stale copies of the suite
+    include: ['tests/**/*.test.{ts,tsx}'],
   },
 })
